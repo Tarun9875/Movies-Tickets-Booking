@@ -2,8 +2,8 @@
 import express from "express";
 import cors from "cors";
 import corsOptions from "./config/cors";
-import routes from "./routes/index";
-
+import routes from "./routes/index";/* 
+import "express-async-errors"; // To handle async errors without try-catch */
 const app = express();
 
 app.use(cors(corsOptions)); // ✅ IMPORTANT

@@ -8,10 +8,12 @@ import {
 
 const router = express.Router();
 
-// GET seats
-router.get("/shows/:id/seats", getShowSeats);
+/* ================= SEATS ================= */
+
+// GET seats for a show
+router.get("/:id/seats", getShowSeats);
 
 // UPDATE blocked seats
-router.put("/shows/:id/seats", updateBlockedSeats);
+router.put("/:id/seats", updateBlockedSeats);
 
 export default router;

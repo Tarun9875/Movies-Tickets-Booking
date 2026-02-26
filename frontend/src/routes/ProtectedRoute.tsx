@@ -1,19 +1,33 @@
-import { Navigate } from "react-router-dom";
+// src/routes/ProtectedRoute.tsx
+
+import React from "react";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAppSelector } from "../app/hooks";
-import type { ReactNode } from "react";
 
 interface Props {
-  children: ReactNode;
+  children: JSX.Element;
   role?: string;
 }
 
 export default function ProtectedRoute({ children, role }: Props) {
   const { user } = useAppSelector((state) => state.auth);
+  const location = useLocation();
 
-  if (!user) return <Navigate to="/login" />;
+  // Not logged in
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
+  }
 
-  if (role && user.role !== role)
-    return <Navigate to="/" />;
+  // Role protection (for admin)
+  if (role && user.role !== role) {
+    return <Navigate to="/unauthorized" replace />;
+  }
 
-  return <>{children}</>;
+  return children;
 }

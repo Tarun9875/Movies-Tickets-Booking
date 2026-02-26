@@ -42,9 +42,28 @@ export const createShow = async (req: Request, res: Response) => {
 // ================= GET ALL SHOWS =================
 export const getShows = async (req: Request, res: Response) => {
   try {
-    const shows = await Show.find()
+    const { movie, status, date } = req.query;
+
+    const filter: any = {};
+
+    // 🎬 Filter by movie
+    if (movie) {
+      filter.movie = movie;
+    }
+
+    // 📌 Filter by status (optional)
+    if (status) {
+      filter.status = status;
+    }
+
+    // 📅 Filter by date (optional)
+    if (date) {
+      filter.date = date;
+    }
+
+    const shows = await Show.find(filter)
       .populate("movie")
-      .sort({ date: 1 });
+      .sort({ date: 1, time: 1 });
 
     res.json({
       success: true,
@@ -58,7 +77,6 @@ export const getShows = async (req: Request, res: Response) => {
     });
   }
 };
-
 // ================= GET SHOW BY ID =================
 export const getShowById = async (req: Request, res: Response) => {
   try {
