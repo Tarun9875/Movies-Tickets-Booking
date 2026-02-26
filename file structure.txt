@@ -1,0 +1,228 @@
+frontend/
+│
+├── public/
+│
+├── src/
+│   ├── app/
+│   │   ├── store.ts               # Redux store
+│   │   ├── hooks.ts               # Typed hooks
+│   │   └── providers.tsx          # Theme/Auth providers
+│   │
+│   ├── assets/
+│   │   ├── images/
+│   │   └── icons/
+│   │
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Loader.tsx
+│   │   │   └── ThemeToggle.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── Sidebar.tsx
+│   │
+│   ├── features/
+│   │   ├── auth/
+│   │   │   ├── authSlice.ts
+│   │   │   ├── authAPI.ts
+│   │   │   └── types.ts
+│   │   │
+│   │   ├── booking/
+│   │   │   ├── bookingSlice.ts
+│   │   │   ├── seatGrid.tsx
+│   │   │   └── bookingAPI.ts
+│   │   │
+│   │   ├── movie/
+│   │   │   ├── movieSlice.ts
+│   │   │   └── movieAPI.ts
+│   │   │
+│   │   └── theme/
+│   │       └── themeSlice.ts
+│   │
+│   ├── pages/
+│   │   ├── customer/
+│   │   │   ├── Home.tsx
+│   │   │   ├── MovieDetails.tsx
+│   │   │   ├── SeatSelection.tsx
+│   │   │   ├── Checkout.tsx
+│   │   │   └── MyBookings.tsx
+│   │   │
+│   │   └── admin/
+│   │       ├── Dashboard.tsx
+│   │       ├── Movies.tsx
+│   │       ├── Shows.tsx
+│   │       ├── Screens.tsx
+│   │       └── Bookings.tsx
+│   │
+│   ├── routes/
+│   │   ├── AppRoutes.tsx
+│   │   ├── AdminRoutes.tsx
+│   │   └── ProtectedRoute.tsx
+│   │
+│   ├── services/
+│   │   ├── axios.ts
+│   │   └── socket.ts
+│   │
+│   ├── styles/
+│   │   └── index.css
+│   │
+│   ├── utils/
+│   │   ├── constants.ts
+│   │   └── helpers.ts
+│   │
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── tailwind.config.ts
+├── tsconfig.json
+└── vite.config.ts
+--------------------------------------------------------
+--------------------------------------------------------------
+backend/
+│
+├── src/
+│   ├── config/
+│   │   ├── db.ts
+│   │   ├── redis.ts
+│   │   ├── env.ts
+│   │   └── socket.ts
+│   │
+│   ├── modules/
+│   │   ├── auth/
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.routes.ts
+│   │   │   └── auth.validation.ts
+│   │   │
+│   │   ├── movie/
+│   │   ├── booking/
+│   │   ├── seat/
+│   │   └── admin/
+│   │
+│   ├── middlewares/
+│   │   ├── auth.middleware.ts
+│   │   ├── error.middleware.ts
+│   │   ├── rateLimiter.ts
+│   │   └── validate.ts
+│   │
+│   ├── models/
+│   │   ├── User.ts
+│   │   ├── Movie.ts
+│   │   ├── Show.ts
+│   │   ├── Seat.ts
+│   │   └── Booking.ts
+│   │
+│   ├── routes/
+│   │   └── index.ts
+│   │
+│   ├── utils/
+│   │   ├── jwt.ts
+│   │   ├── redisKeys.ts
+│   │   └── logger.ts
+│   │
+│   ├── app.ts
+│   └── server.ts
+│
+├── tsconfig.json
+├── package.json
+└── .env
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------------------
+frontend/
+│
+├── public/
+│
+├── src/
+│   ├── app/
+│   │   ├── store.ts               # Redux store
+│   │   ├── hooks.ts               # Typed hooks
+│   │   └── providers.tsx          # Theme/Auth providers
+│   │
+│   ├── assets/
+│   │   ├── images/
+│   │   └── icons/
+│   │
+│   ├── components/
+│   │   ├── common/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Loader.tsx
+│   │   │   └── ThemeToggle.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   └── Sidebar.tsx
+│   │
+│   ├── features/
+│   │   ├── auth/
+│   │   │   ├── authSlice.ts
+│   │   │   ├── authAPI.ts
+│   │   │   └── types.ts
+│   │   │
+│   │   ├── booking/
+│   │   │   ├── bookingSlice.ts
+│   │   │   ├── seatGrid.tsx
+│   │   │   └── bookingAPI.ts
+│   │   │
+│   │   ├── movie/
+│   │   │   ├── movieSlice.ts
+│   │   │   └── movieAPI.ts
+│   │   │
+│   │   └── theme/
+│   │       └── themeSlice.ts
+│   │
+│   ├── pages/
+│   │   ├── customer/
+│   │   │   ├── Home.tsx
+│   │   │   ├── MovieDetails.tsx
+│   │   │   ├── SeatSelection.tsx
+│   │   │   ├── Checkout.tsx
+│   │   │   └── MyBookings.tsx
+│   │   │
+│   │   └── admin/
+│   │       ├── Dashboard.tsx
+│   │       ├── Movies.tsx
+│   │       ├── Shows.tsx
+│   │       ├── Screens.tsx
+│   │       └── Bookings.tsx
+│   │
+│   ├── routes/
+│   │   ├── AppRoutes.tsx
+│   │   ├── AdminRoutes.tsx
+│   │   └── ProtectedRoute.tsx
+│   │
+│   ├── services/
+│   │   ├── axios.ts
+│   │   └── socket.ts
+│   │
+│   ├── styles/
+│   │   └── index.css
+│   │
+│   ├── utils/
+│   │   ├── constants.ts
+│   │   └── helpers.ts
+│   │
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── tailwind.config.ts
+├── tsconfig.json
+└── vite.config.ts[this fronted structure add more componet like when creating page othe add photo show sliding like this add compoent page for better view so error fast fing so add more file structure and write full file structure and [ruchhu you like add more file structure pages componet wise seprate]]
