@@ -1,38 +1,51 @@
+// ================= MOVIE CONTROLLER =================
 import { Request, Response } from "express";
 import Movie from "../../models/Movie.model";
-import fs from "fs";
-import path from "path";
-
-/* ================= HELPER ================= */
-const deleteFileIfExists = (filePath: string) => {
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-};
 
 /* =======================================================
-   BASIC MOVIE CRUD
+   BASIC MOVIE CRUD (POSTER URL SYSTEM)
 ======================================================= */
 
 /**
- * ================= CREATE MOVIE (Basic Info)
+ * ================= CREATE MOVIE
  */
 export const createMovie = async (req: Request, res: Response) => {
   try {
-    const posterFile = req.file;
+    const {
+      title,
+      description,
+      duration,
+      language,
+      rating,
+      releaseDate,
+      status,
+      posterUrl,
+    } = req.body;
+
+    if (!title || !language || !duration || !posterUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Required fields missing",
+      });
+    }
 
     const movie = await Movie.create({
-      ...req.body,
-      poster: posterFile
-        ? `/uploads/posters/${posterFile.filename}`
-        : "",
+      title,
+      description,
+      duration,
+      language,
+      rating,
+      releaseDate,
+      status,
+      posterUrl,
     });
 
     res.status(201).json({
       success: true,
       movie,
     });
-  } catch {
+  } catch (error) {
+    console.error("Create Movie Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to create movie",
@@ -56,7 +69,8 @@ export const getMovies = async (req: Request, res: Response) => {
       success: true,
       movies,
     });
-  } catch {
+  } catch (error) {
+    console.error("Get Movies Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch movies",
@@ -82,7 +96,8 @@ export const getMovieById = async (req: Request, res: Response) => {
       success: true,
       movie,
     });
-  } catch {
+  } catch (error) {
+    console.error("Get Movie By ID Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch movie",
@@ -91,46 +106,29 @@ export const getMovieById = async (req: Request, res: Response) => {
 };
 
 /**
- * ================= UPDATE BASIC MOVIE
+ * ================= UPDATE MOVIE
  */
 export const updateMovie = async (req: Request, res: Response) => {
   try {
-    const movie = await Movie.findById(req.params.id);
+    const updatedMovie = await Movie.findByIdAndUpdate(
+      req.params.id,
+      { ...req.body },
+      { new: true }
+    );
 
-    if (!movie) {
+    if (!updatedMovie) {
       return res.status(404).json({
         success: false,
         message: "Movie not found",
       });
     }
 
-    const posterFile = req.file;
-
-    if (posterFile && movie.poster) {
-      const oldPath = path.join(
-        __dirname,
-        "../../..",
-        movie.poster
-      );
-      deleteFileIfExists(oldPath);
-    }
-
-    const updatedMovie = await Movie.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...req.body,
-        poster: posterFile
-          ? `/uploads/posters/${posterFile.filename}`
-          : movie.poster,
-      },
-      { new: true }
-    );
-
     res.json({
       success: true,
       movie: updatedMovie,
     });
-  } catch {
+  } catch (error) {
+    console.error("Update Movie Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update movie",
@@ -139,7 +137,7 @@ export const updateMovie = async (req: Request, res: Response) => {
 };
 
 /* =======================================================
-   MOVIE DETAIL CONTROLLERS
+   MOVIE DETAILS (FULL JSON SYSTEM)
 ======================================================= */
 
 /**
@@ -158,32 +156,10 @@ export const addMovieDetails = async (req: Request, res: Response) => {
 
     const { trailer, genre, director, cast } = req.body;
 
-    const files = req.files as {
-      [fieldname: string]: Express.Multer.File[];
-    };
-
-    const castFiles = files?.castImages || [];
-
-    let parsedCast: any[] = [];
-
-    if (cast) {
-      parsedCast = JSON.parse(cast);
-    }
-
-    parsedCast = parsedCast.map((member, index) => ({
-      name: member.name,
-      role: member.role,
-      image: castFiles[index]
-        ? `/uploads/cast/${castFiles[index].filename}`
-        : "",
-    }));
-
     movie.trailer = trailer;
     movie.genre = genre;
     movie.director = director;
-
-    // ✅ FIXED TYPE ISSUE HERE
-    movie.set("cast", parsedCast);
+    movie.cast = cast || [];
 
     await movie.save();
 
@@ -192,7 +168,8 @@ export const addMovieDetails = async (req: Request, res: Response) => {
       movie,
       message: "Movie details added successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Add Movie Details Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to add movie details",
@@ -216,44 +193,10 @@ export const updateMovieDetails = async (req: Request, res: Response) => {
 
     const { trailer, genre, director, cast } = req.body;
 
-    const files = req.files as {
-      [fieldname: string]: Express.Multer.File[];
-    };
-
-    const castFiles = files?.castImages || [];
-
-    let parsedCast: any[] = [];
-
-    if (cast) {
-      parsedCast = JSON.parse(cast);
-
-      // Delete old cast images
-      movie.cast.forEach((member: any) => {
-        if (member.image) {
-          const oldPath = path.join(
-            __dirname,
-            "../../..",
-            member.image
-          );
-          deleteFileIfExists(oldPath);
-        }
-      });
-
-      parsedCast = parsedCast.map((member, index) => ({
-        name: member.name,
-        role: member.role,
-        image: castFiles[index]
-          ? `/uploads/cast/${castFiles[index].filename}`
-          : "",
-      }));
-    }
-
     movie.trailer = trailer;
     movie.genre = genre;
     movie.director = director;
-
-    // ✅ FIXED TYPE ISSUE HERE
-    movie.set("cast", parsedCast);
+    movie.cast = cast || [];
 
     await movie.save();
 
@@ -262,7 +205,8 @@ export const updateMovieDetails = async (req: Request, res: Response) => {
       movie,
       message: "Movie details updated successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Update Movie Details Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update movie details",
@@ -275,7 +219,7 @@ export const updateMovieDetails = async (req: Request, res: Response) => {
  */
 export const deleteMovie = async (req: Request, res: Response) => {
   try {
-    const movie = await Movie.findById(req.params.id);
+    const movie = await Movie.findByIdAndDelete(req.params.id);
 
     if (!movie) {
       return res.status(404).json({
@@ -284,33 +228,12 @@ export const deleteMovie = async (req: Request, res: Response) => {
       });
     }
 
-    if (movie.poster) {
-      const posterPath = path.join(
-        __dirname,
-        "../../..",
-        movie.poster
-      );
-      deleteFileIfExists(posterPath);
-    }
-
-    movie.cast.forEach((member: any) => {
-      if (member.image) {
-        const castPath = path.join(
-          __dirname,
-          "../../..",
-          member.image
-        );
-        deleteFileIfExists(castPath);
-      }
-    });
-
-    await movie.deleteOne();
-
     res.json({
       success: true,
       message: "Movie deleted successfully",
     });
-  } catch {
+  } catch (error) {
+    console.error("Delete Movie Error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to delete movie",

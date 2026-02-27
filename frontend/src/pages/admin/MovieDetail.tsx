@@ -1,4 +1,5 @@
 // src/pages/admin/MovieDetail.tsx
+
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -7,13 +8,12 @@ import api from "../../services/axios";
 interface CastMember {
   name: string;
   role: string;
-  image: File | null;
-  preview?: string;
+  image: string; // ✅ URL instead of File
 }
 
 export default function AdminMovieDetailForm() {
   const navigate = useNavigate();
-  const { id } = useParams(); // ✅ GET MOVIE ID
+  const { id } = useParams();
 
   const [form, setForm] = useState({
     trailer: "",
@@ -24,14 +24,16 @@ export default function AdminMovieDetailForm() {
   const [cast, setCast] = useState<CastMember[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // ================= HANDLE BASIC FIELDS =================
-  const handleChange = (e: any) => {
+  /* ================= HANDLE BASIC FIELDS ================= */
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ================= CAST HANDLING =================
+  /* ================= CAST HANDLING ================= */
   const addCastMember = () => {
-    setCast([...cast, { name: "", role: "", image: null }]);
+    setCast([...cast, { name: "", role: "", image: "" }]);
   };
 
   const removeCastMember = (index: number) => {
@@ -42,24 +44,15 @@ export default function AdminMovieDetailForm() {
 
   const handleCastChange = (
     index: number,
-    field: string,
+    field: keyof CastMember,
     value: string
   ) => {
     const updated = [...cast];
-    (updated[index] as any)[field] = value;
+    updated[index][field] = value;
     setCast(updated);
   };
 
-  const handleCastImage = (index: number, file: File | null) => {
-    if (!file) return;
-
-    const updated = [...cast];
-    updated[index].image = file;
-    updated[index].preview = URL.createObjectURL(file);
-    setCast(updated);
-  };
-
-  // ================= SUBMIT =================
+  /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
     if (!id) {
       toast.error("Movie ID missing");
@@ -69,31 +62,14 @@ export default function AdminMovieDetailForm() {
     try {
       setLoading(true);
 
-      const formData = new FormData();
+      const payload = {
+        trailer: form.trailer.trim(),
+        genre: form.genre.trim(),
+        director: form.director.trim(),
+        cast: cast, // ✅ Send directly as JSON
+      };
 
-      formData.append("trailer", form.trailer);
-      formData.append("genre", form.genre);
-      formData.append("director", form.director);
-
-      // Append cast JSON (name + role only)
-      const castData = cast.map((c) => ({
-        name: c.name,
-        role: c.role,
-      }));
-
-      formData.append("cast", JSON.stringify(castData));
-
-      // ✅ IMPORTANT: Use SAME field name as backend
-      cast.forEach((c) => {
-        if (c.image) {
-          formData.append("castImages", c.image);
-        }
-      });
-
-      // ✅ FIXED API URL
-      await api.post(`/movies/${id}/details`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.post(`/movies/${id}/details`, payload);
 
       toast.success("Movie details added successfully 🎉");
       navigate("/admin/movies");
@@ -128,8 +104,10 @@ export default function AdminMovieDetailForm() {
           </label>
           <input
             name="trailer"
+            placeholder="https://youtube.com/..."
             className="w-full p-3 rounded-lg"
             style={{ backgroundColor: "var(--input-bg)" }}
+            value={form.trailer}
             onChange={handleChange}
           />
         </div>
@@ -140,8 +118,10 @@ export default function AdminMovieDetailForm() {
           </label>
           <input
             name="genre"
+            placeholder="Action, Drama"
             className="w-full p-3 rounded-lg"
             style={{ backgroundColor: "var(--input-bg)" }}
+            value={form.genre}
             onChange={handleChange}
           />
         </div>
@@ -152,8 +132,10 @@ export default function AdminMovieDetailForm() {
           </label>
           <input
             name="director"
+            placeholder="Christopher Nolan"
             className="w-full p-3 rounded-lg"
             style={{ backgroundColor: "var(--input-bg)" }}
+            value={form.director}
             onChange={handleChange}
           />
         </div>
@@ -174,6 +156,7 @@ export default function AdminMovieDetailForm() {
             <input
               placeholder="Actor Name"
               className="p-2 rounded"
+              value={member.name}
               onChange={(e) =>
                 handleCastChange(index, "name", e.target.value)
               }
@@ -182,16 +165,18 @@ export default function AdminMovieDetailForm() {
             <input
               placeholder="Role"
               className="p-2 rounded"
+              value={member.role}
               onChange={(e) =>
                 handleCastChange(index, "role", e.target.value)
               }
             />
 
             <input
-              type="file"
-              accept="image/*"
+              placeholder="/images/actor.jpg"
+              className="p-2 rounded"
+              value={member.image}
               onChange={(e) =>
-                handleCastImage(index, e.target.files?.[0] || null)
+                handleCastChange(index, "image", e.target.value)
               }
             />
 
@@ -203,10 +188,14 @@ export default function AdminMovieDetailForm() {
               Remove
             </button>
 
-            {member.preview && (
+            {member.image && (
               <img
-                src={member.preview}
+                src={member.image}
                 className="h-20 mt-2 rounded"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src =
+                    "/images/no-image.jpg";
+                }}
               />
             )}
           </div>

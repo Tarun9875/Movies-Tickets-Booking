@@ -17,14 +17,13 @@ export default function EditMovie() {
     rating: "",
     releaseDate: "",
     status: "NOW_SHOWING",
+    posterUrl: "",
   });
 
-  const [poster, setPoster] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  // ================= FETCH MOVIE =================
+  /* ================= FETCH MOVIE ================= */
   useEffect(() => {
     const fetchMovie = async () => {
       try {
@@ -34,18 +33,15 @@ export default function EditMovie() {
         setForm({
           title: movie.title || "",
           description: movie.description || "",
-          duration: movie.duration || "",
+          duration: movie.duration?.toString() || "",
           language: movie.language || "",
-          rating: movie.rating || "",
+          rating: movie.rating?.toString() || "",
           releaseDate: movie.releaseDate
             ? movie.releaseDate.split("T")[0]
             : "",
           status: movie.status || "NOW_SHOWING",
+          posterUrl: movie.posterUrl || "",
         });
-
-        if (movie.poster) {
-          setPreview(`http://localhost:5000${movie.poster}`);
-        }
       } catch {
         toast.error("Failed to load movie");
       } finally {
@@ -56,51 +52,67 @@ export default function EditMovie() {
     if (id) fetchMovie();
   }, [id]);
 
-  // ================= HANDLE CHANGE =================
-  const handleChange = (e: any) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  /* ================= HANDLE CHANGE ================= */
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value ?? "",
+    }));
   };
 
-  // ================= POSTER CHANGE =================
-  const handlePosterChange = (file: File | null) => {
-    if (!file) return;
-    setPoster(file);
-    setPreview(URL.createObjectURL(file));
-  };
-
-  // ================= VALIDATION =================
+  /* ================= VALIDATION ================= */
   const validateForm = () => {
-    if (!form.title || !form.language || !form.duration) {
-      toast.error("Please fill all required fields");
+    if (!form.title.trim()) {
+      toast.error("Movie title is required");
       return false;
     }
+
+    if (!form.language.trim()) {
+      toast.error("Language is required");
+      return false;
+    }
+
+    if (!form.duration || Number(form.duration) <= 0) {
+      toast.error("Valid duration is required");
+      return false;
+    }
+
+    if (!form.posterUrl.trim()) {
+      toast.error("Poster image path is required");
+      return false;
+    }
+
     return true;
   };
 
-  // ================= UPDATE =================
+  /* ================= UPDATE ================= */
   const handleUpdate = async () => {
     if (!validateForm()) return;
 
     try {
       setLoading(true);
 
-      const formData = new FormData();
-      Object.entries(form).forEach(([key, value]) =>
-        formData.append(key, value)
-      );
+      const payload = {
+        title: form.title.trim(),
+        description: form.description.trim(),
+        duration: Number(form.duration),
+        language: form.language.trim(),
+        rating: form.rating ? Number(form.rating) : undefined,
+        releaseDate: form.releaseDate || undefined,
+        status: form.status,
+        posterUrl: form.posterUrl.trim(),
+      };
 
-      if (poster) formData.append("poster", poster);
-
-      await api.put(`/movies/${id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await api.put(`/movies/${id}`, payload);
 
       toast.success("Movie updated successfully 🎉");
       navigate("/admin/movies");
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Update failed"
-      );
+      toast.error(error.response?.data?.message || "Update failed");
     } finally {
       setLoading(false);
     }
@@ -119,116 +131,175 @@ export default function EditMovie() {
         color: "var(--text-color)",
       }}
     >
-      <h1 className="text-3xl font-bold mb-6">
-        ✏ Edit Movie
-      </h1>
+      <h1 className="text-3xl font-bold mb-8">✏ Edit Movie</h1>
 
-      <div className="grid md:grid-cols-2 gap-5">
+      <div className="grid md:grid-cols-2 gap-6">
 
-        <input
-          name="title"
-          value={form.title}
-          placeholder="Movie Title *"
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <input
-          name="language"
-          value={form.language}
-          placeholder="Language *"
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <input
-          name="duration"
-          value={form.duration}
-          placeholder="Duration (min) *"
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <input
-          name="rating"
-          value={form.rating}
-          placeholder="Rating (e.g. 8.5)"
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <input
-          type="date"
-          name="releaseDate"
-          value={form.releaseDate}
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <select
-          name="status"
-          value={form.status}
-          className="p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        >
-          <option value="NOW_SHOWING">Now Showing</option>
-          <option value="UPCOMING">Upcoming</option>
-        </select>
-
-        <textarea
-          name="description"
-          value={form.description}
-          placeholder="Description"
-          className="md:col-span-2 p-3 rounded-lg"
-          style={{ backgroundColor: "var(--input-bg)" }}
-          onChange={handleChange}
-        />
-
-        <div className="md:col-span-2">
+        {/* Title */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Movie Title *
+          </label>
           <input
-            type="file"
-            accept="image/*"
-            onChange={(e) =>
-              handlePosterChange(e.target.files?.[0] || null)
-            }
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+            placeholder="Avengers Endgame"
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
           />
         </div>
 
-        {preview && (
+        {/* Language */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Language *
+          </label>
+          <input
+            name="language"
+            value={form.language}
+            onChange={handleChange}
+            placeholder="English / Hindi"
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+        </div>
+
+        {/* Duration */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Duration (minutes) *
+          </label>
+          <input
+            type="number"
+            name="duration"
+            value={form.duration}
+            onChange={handleChange}
+            placeholder="150"
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+        </div>
+
+        {/* Rating */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Rating (0 - 10)
+          </label>
+          <input
+            type="number"
+            step="0.1"
+            name="rating"
+            value={form.rating}
+            onChange={handleChange}
+            placeholder="8.5"
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+        </div>
+
+        {/* Release Date */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Release Date
+          </label>
+          <input
+            type="date"
+            name="releaseDate"
+            value={form.releaseDate}
+            onChange={handleChange}
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+        </div>
+
+        {/* Status */}
+        <div>
+          <label className="block mb-2 font-semibold">
+            Status
+          </label>
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          >
+            <option value="NOW_SHOWING">Now Showing</option>
+            <option value="UPCOMING">Upcoming</option>
+          </select>
+        </div>
+
+        {/* Poster URL */}
+        <div className="md:col-span-2">
+          <label className="block mb-2 font-semibold">
+            Poster Image Path *
+          </label>
+          <input
+            name="posterUrl"
+            value={form.posterUrl}
+            onChange={handleChange}
+            placeholder="/images/wp5115631.jpg"
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+          <p className="text-sm mt-1 opacity-70">
+            Image must be inside public/images/
+          </p>
+        </div>
+
+        {/* Poster Preview */}
+        {form.posterUrl && (
           <div className="md:col-span-2">
+            <label className="block mb-2 font-semibold">
+              Poster Preview
+            </label>
             <img
-              src={preview}
+              src={form.posterUrl}
               alt="Poster Preview"
               className="h-60 rounded-lg shadow-lg"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "/images/no-image.jpg";
+              }}
             />
           </div>
         )}
+
+        {/* Description */}
+        <div className="md:col-span-2">
+          <label className="block mb-2 font-semibold">
+            Description
+          </label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={4}
+            placeholder="Write movie description..."
+            className="w-full p-3 rounded-lg"
+            style={{ backgroundColor: "var(--input-bg)" }}
+          />
+        </div>
+
       </div>
 
-      <div className="flex gap-4 mt-8">
+      <div className="flex gap-4 mt-10">
         <button
+          type="button"
           onClick={() => navigate("/admin/movies")}
           className="flex-1 py-3 rounded-lg"
-          style={{
-            backgroundColor: "var(--border-color)",
-          }}
+          style={{ backgroundColor: "var(--border-color)" }}
         >
           Cancel
         </button>
 
         <button
+          type="button"
           onClick={handleUpdate}
           disabled={loading}
           className="flex-1 py-3 rounded-lg text-white"
-          style={{
-            backgroundColor: "#dc2626",
-          }}
+          style={{ backgroundColor: "#dc2626" }}
         >
           {loading ? "Updating..." : "Update Movie"}
         </button>

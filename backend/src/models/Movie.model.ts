@@ -1,7 +1,31 @@
-import mongoose from "mongoose";
+// ================= MOVIE MODEL =================
+import mongoose, { Schema, Document } from "mongoose";
+
+/* ================= CAST INTERFACE ================= */
+interface ICast {
+  name: string;
+  role: string;
+  image?: string;
+}
+
+/* ================= MOVIE INTERFACE ================= */
+export interface IMovie extends Document {
+  title: string;
+  description?: string;
+  duration: number;
+  language: string;
+  rating?: number;
+  genre?: string;
+  director?: string;
+  trailer?: string;
+  releaseDate?: Date;
+  status: "NOW_SHOWING" | "UPCOMING";
+  posterUrl: string;
+  cast: ICast[];
+}
 
 /* ================= CAST SUB-SCHEMA ================= */
-const castSchema = new mongoose.Schema(
+const castSchema = new Schema<ICast>(
   {
     name: {
       type: String,
@@ -14,15 +38,14 @@ const castSchema = new mongoose.Schema(
       trim: true,
     },
     image: {
-      type: String, // stored image path
-      required: false,
+      type: String,
     },
   },
   { _id: false }
 );
 
 /* ================= MOVIE SCHEMA ================= */
-const movieSchema = new mongoose.Schema(
+const movieSchema = new Schema<IMovie>(
   {
     title: {
       type: String,
@@ -37,11 +60,13 @@ const movieSchema = new mongoose.Schema(
 
     duration: {
       type: Number,
+      required: true,
       min: 1,
     },
 
     language: {
       type: String,
+      required: true,
       trim: true,
     },
 
@@ -76,17 +101,22 @@ const movieSchema = new mongoose.Schema(
       default: "NOW_SHOWING",
     },
 
-    poster: {
+    // ✅ FIXED FIELD NAME
+    posterUrl: {
       type: String,
       required: true,
+      trim: true,
     },
 
-    cast: [castSchema], // 👥 Cast Array
+    cast: {
+      type: [castSchema],
+      default: [],
+    },
   },
   { timestamps: true }
 );
 
 /* ================= EXPORT MODEL ================= */
-const Movie = mongoose.model("Movie", movieSchema);
+const Movie = mongoose.model<IMovie>("Movie", movieSchema);
 
 export default Movie;

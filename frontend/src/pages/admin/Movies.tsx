@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import api, { BASE_URL } from "../../services/axios";
+import api from "../../services/axios";
 import { Link } from "react-router-dom";
 
 export default function AdminMovies() {
   const [movies, setMovies] = useState<any[]>([]);
   const [filteredMovies, setFilteredMovies] = useState<any[]>([]);
-  const [search, setSearch] = useState(""); // ✅ FIXED
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -35,7 +35,7 @@ export default function AdminMovies() {
 
     if (search) {
       updated = updated.filter((movie) =>
-        movie.title.toLowerCase().includes(search.toLowerCase())
+        movie.title?.toLowerCase().includes(search.toLowerCase())
       );
     }
 
@@ -128,17 +128,8 @@ export default function AdminMovies() {
       </div>
 
       {/* ================= STATES ================= */}
-      {loading && (
-        <p style={{ color: "var(--muted-text)" }}>
-          Loading movies...
-        </p>
-      )}
-
-      {error && (
-        <p style={{ color: "red" }}>
-          {error}
-        </p>
-      )}
+      {loading && <p>Loading movies...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       {!loading && filteredMovies.length === 0 && (
         <div
@@ -146,7 +137,6 @@ export default function AdminMovies() {
           style={{
             backgroundColor: "var(--card-bg)",
             border: "1px solid var(--border-color)",
-            color: "var(--muted-text)",
           }}
         >
           No movies found.
@@ -164,14 +154,19 @@ export default function AdminMovies() {
               border: "1px solid var(--border-color)",
             }}
           >
+            {/* ✅ UPDATED IMAGE SYSTEM */}
             <img
               src={
-                movie.poster
-                  ? `${BASE_URL}${movie.poster}`
-                  : "https://via.placeholder.com/400x600?text=No+Image"
+                movie.posterUrl
+                  ? movie.posterUrl
+                  : "/images/no-image.jpg"
               }
               alt={movie.title}
               className="h-60 w-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "/images/no-image.jpg";
+              }}
             />
 
             <div className="p-4">
@@ -229,7 +224,6 @@ export default function AdminMovies() {
                   </button>
                 </div>
 
-                {/* ✅ FIXED ROUTE STRUCTURE */}
                 <Link
                   to={`/admin/movies/${movie._id}/details`}
                   className="w-full text-center py-2 rounded-lg"
@@ -246,7 +240,6 @@ export default function AdminMovies() {
                   className="w-full py-2 rounded-lg"
                   style={{
                     backgroundColor: "var(--border-color)",
-                    color: "var(--text-color)",
                   }}
                 >
                   Toggle Status

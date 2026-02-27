@@ -3,27 +3,29 @@
 import { useEffect, useState } from "react";
 import api from "../../services/axios";
 import MovieGrid from "../movie/MovieGrid";
+import  type { Movie } from "../../types/movie"; // ✅ USE SHARED TYPE
 
 export default function MovieSlider() {
-  const [nowShowing, setNowShowing] = useState<any[]>([]);
-  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [nowShowing, setNowShowing] = useState<Movie[]>([]);
+  const [upcoming, setUpcoming] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         const res = await api.get("/movies");
-        const movies = res.data.movies;
+
+        const movies: Movie[] = res.data.movies || [];
 
         setNowShowing(
           movies.filter(
-            (movie: any) => movie.status === "NOW_SHOWING"
+            (movie) => movie.status === "NOW_SHOWING"
           )
         );
 
         setUpcoming(
           movies.filter(
-            (movie: any) => movie.status === "UPCOMING"
+            (movie) => movie.status === "UPCOMING"
           )
         );
       } catch (error) {
@@ -74,6 +76,7 @@ export default function MovieSlider() {
           <MovieGrid movies={upcoming} />
         </section>
       )}
+
     </div>
   );
 }

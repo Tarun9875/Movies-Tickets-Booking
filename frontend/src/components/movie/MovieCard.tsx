@@ -2,10 +2,10 @@
 
 import { Link, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../../app/hooks";
-import { BASE_URL } from "../../services/axios";
+import type { Movie } from "../../types/movie";
 
 interface MovieProps {
-  movie: any;
+  movie: Movie;
 }
 
 export default function MovieCard({ movie }: MovieProps) {
@@ -14,15 +14,13 @@ export default function MovieCard({ movie }: MovieProps) {
 
   if (!movie) return null;
 
-  // 🔥 Fix ID issue (MongoDB uses _id)
   const movieId = movie._id || movie.id;
 
-  // 🔥 Fix image path
-  const imageUrl = movie.poster
-    ? movie.poster.startsWith("http")
-      ? movie.poster
-      : `${BASE_URL}${movie.poster}`
-    : "/no-image.png";
+  // ✅ NEW IMAGE SYSTEM (posterUrl based)
+  const imageUrl =
+    movie.posterUrl && movie.posterUrl.trim() !== ""
+      ? movie.posterUrl
+      : "/images/no-image.jpg";
 
   const handleBookNow = () => {
     if (movie.status !== "NOW_SHOWING") return;
@@ -62,6 +60,10 @@ export default function MovieCard({ movie }: MovieProps) {
               group-hover:scale-110
               transition duration-500
             "
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).src =
+                "/images/no-image.jpg";
+            }}
           />
 
           {/* Overlay */}
@@ -92,17 +94,15 @@ export default function MovieCard({ movie }: MovieProps) {
             className="text-sm mt-1"
             style={{ color: "var(--muted-text)" }}
           >
-            {movie.language} • {movie.duration} min
+            {movie.language ?? "--"} • {movie.duration ?? "--"} min
           </p>
         </div>
       </Link>
 
       {/* Bottom Section */}
       <div className="px-5 pb-5 mt-auto">
-
         {/* Status + Rating */}
         <div className="flex justify-between items-center mb-4">
-
           <span
             className="px-3 py-1 text-xs rounded-full font-medium"
             style={{
@@ -128,9 +128,8 @@ export default function MovieCard({ movie }: MovieProps) {
               shadow-md
             "
           >
-            ⭐ {movie.rating || "N/A"}
+            ⭐ {movie.rating ?? "N/A"}
           </span>
-
         </div>
 
         {/* Book Button */}
@@ -151,7 +150,6 @@ export default function MovieCard({ movie }: MovieProps) {
             ? "Book Now"
             : "Coming Soon"}
         </button>
-
       </div>
     </div>
   );

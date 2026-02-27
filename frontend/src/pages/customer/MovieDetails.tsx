@@ -3,16 +3,17 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import PageContainer from "../../components/layout/PageContainer";
-import api, { BASE_URL } from "../../services/axios";
+import api from "../../services/axios";
 import { toast } from "react-toastify";
 import { useAppSelector } from "../../app/hooks";
+import type { Movie } from "../../types/movie";
 
 export default function MovieDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
 
-  const [movie, setMovie] = useState<any>(null);
+  const [movie, setMovie] = useState<Movie | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTrailer, setShowTrailer] = useState(false);
 
@@ -54,19 +55,21 @@ export default function MovieDetails() {
     );
   }
 
-  /* ================= IMAGE FIX ================= */
-  const posterUrl = movie.poster?.startsWith("http")
-    ? movie.poster
-    : `${BASE_URL}${movie.poster}`;
+  /* ================= IMAGE SYSTEM (posterUrl) ================= */
+  const posterUrl =
+    movie.posterUrl && movie.posterUrl.trim() !== ""
+      ? movie.posterUrl
+      : "/images/no-image.jpg";
 
-  const getCastImage = (image: string) => {
-    if (!image) return "https://via.placeholder.com/150?text=No+Image";
-    return image.startsWith("http")
-      ? image
-      : `${BASE_URL}${image}`;
+  const getCastImage = (image?: string) => {
+    if (!image || image.trim() === "") {
+      return "/images/no-image.jpg";
+    }
+    return image;
   };
 
-  const getEmbedUrl = (url: string) => {
+  /* ================= YOUTUBE EMBED ================= */
+  const getEmbedUrl = (url?: string) => {
     if (!url) return "";
 
     if (url.includes("youtu.be")) {
@@ -128,6 +131,10 @@ export default function MovieDetails() {
               alt={movie.title}
               className="w-full max-w-xl rounded-3xl shadow-2xl"
               style={{ border: "1px solid var(--border-color)" }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src =
+                  "/images/no-image.jpg";
+              }}
             />
           </div>
 
@@ -144,7 +151,7 @@ export default function MovieDetails() {
             </h1>
 
             <p className="mb-8 text-lg opacity-80">
-              {movie.description}
+              {movie.description ?? "No description available."}
             </p>
 
             {movie.trailer && (
@@ -157,27 +164,40 @@ export default function MovieDetails() {
             )}
 
             <div className="grid grid-cols-2 gap-6 mb-10">
-              <p><strong>Language:</strong> {movie.language}</p>
-              <p><strong>Duration:</strong> {movie.duration} min</p>
-              <p><strong>Rating:</strong> {movie.rating}</p>
-              <p><strong>Genre:</strong> {movie.genre}</p>
-              <p><strong>Release:</strong> {movie.releaseDate?.slice(0,10)}</p>
-              <p><strong>Director:</strong> {movie.director}</p>
+              <p><strong>Language:</strong> {movie.language ?? "--"}</p>
+              <p><strong>Duration:</strong> {movie.duration ?? "--"} min</p>
+              <p><strong>Rating:</strong> {movie.rating ?? "N/A"}</p>
+              <p><strong>Genre:</strong> {movie.genre ?? "--"}</p>
+              <p>
+                <strong>Release:</strong>{" "}
+                {movie.releaseDate
+                  ? movie.releaseDate.slice(0, 10)
+                  : "--"}
+              </p>
+              <p><strong>Director:</strong> {movie.director ?? "--"}</p>
             </div>
 
-            {movie.cast?.length > 0 && (
+            {movie.cast && movie.cast.length > 0 && (
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-4">Cast</h3>
                 <div className="flex gap-6 overflow-x-auto">
-                  {movie.cast.map((actor: any, index: number) => (
+                  {movie.cast.map((actor, index) => (
                     <div key={index} className="text-center">
                       <img
                         src={getCastImage(actor.image)}
                         alt={actor.name}
                         className="w-24 h-24 rounded-full object-cover mx-auto"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src =
+                            "/images/no-image.jpg";
+                        }}
                       />
-                      <p className="mt-2 font-semibold">{actor.name}</p>
-                      <p className="text-xs opacity-70">{actor.role}</p>
+                      <p className="mt-2 font-semibold">
+                        {actor.name}
+                      </p>
+                      <p className="text-xs opacity-70">
+                        {actor.role}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -188,7 +208,8 @@ export default function MovieDetails() {
               onClick={handleBookNow}
               className="w-full py-4 rounded-2xl text-white font-semibold text-lg"
               style={{
-                background: "linear-gradient(to right, #dc2626, #ec4899)",
+                background:
+                  "linear-gradient(to right, #dc2626, #ec4899)",
               }}
             >
               🎟 Book Tickets
@@ -196,8 +217,9 @@ export default function MovieDetails() {
           </div>
         </div>
 
+        {/* TRAILER MODAL */}
         {showTrailer && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
             <div className="relative w-[90%] md:w-[800px] aspect-video bg-black rounded-xl">
               <button
                 onClick={() => setShowTrailer(false)}
