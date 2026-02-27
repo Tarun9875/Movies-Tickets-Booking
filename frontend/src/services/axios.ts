@@ -2,40 +2,29 @@
 
 import axios from "axios";
 
-/**
- * ===============================
- *  BASE URL CONFIG
- * ===============================
- */
+/* ===============================
+   BASE URL
+================================ */
 export const BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   "http://localhost:5000";
 
-/**
- * ===============================
- *  API BASE URL
- * ===============================
- */
 export const API_URL = `${BASE_URL}/api`;
 
-/**
- * ===============================
- *  AXIOS INSTANCE
- * ===============================
- */
+/* ===============================
+   AXIOS INSTANCE
+================================ */
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true,
 });
 
-/**
- * ===============================
- *  REQUEST INTERCEPTOR
- * ===============================
- */
+/* ===============================
+   REQUEST INTERCEPTOR
+================================ */
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    // 🔥 IMPORTANT: Use SAME KEY as login
+    const token = localStorage.getItem("accessToken");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -46,18 +35,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-/**
- * ===============================
- *  RESPONSE INTERCEPTOR
- * ===============================
- */
+/* ===============================
+   RESPONSE INTERCEPTOR
+================================ */
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+      console.log("Session expired");
+      localStorage.removeItem("accessToken");
     }
+
     return Promise.reject(error);
   }
 );

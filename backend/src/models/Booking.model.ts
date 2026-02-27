@@ -1,28 +1,29 @@
-// backend/src/models/Booking.model.ts
+// models/Booking.model.ts
+import mongoose from "mongoose";
 
-import mongoose, { Schema, Document } from "mongoose";
-
-export interface IBooking extends Document {
-  show: mongoose.Types.ObjectId;
-  user: mongoose.Types.ObjectId;
-  seats: string[];
-  status: string;
-}
-
-const bookingSchema = new Schema<IBooking>(
+const bookingSchema = new mongoose.Schema(
   {
-    show: {
-      type: Schema.Types.ObjectId,
-      ref: "Show",
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
+    show: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Show",
       required: true,
     },
     seats: {
       type: [String],
+      required: true,
+    },
+    totalAmount: {
+      type: Number,
+      required: true,
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["UPI", "CARD"],
       required: true,
     },
     status: {
@@ -34,6 +35,4 @@ const bookingSchema = new Schema<IBooking>(
   { timestamps: true }
 );
 
-const Booking = mongoose.model<IBooking>("Booking", bookingSchema);
-
-export default Booking;
+export default mongoose.model("Booking", bookingSchema);

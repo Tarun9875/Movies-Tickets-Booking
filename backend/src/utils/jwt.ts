@@ -1,4 +1,5 @@
-// utils/jwt.ts
+// backend/src/utils/jwt.ts
+
 import jwt, { Secret, SignOptions, JwtPayload } from "jsonwebtoken";
 
 /* ===================================================== */
@@ -14,7 +15,7 @@ if (!JWT_SECRET) {
 }
 
 /* ===================================================== */
-/*                   TOKEN TYPES                         */
+/*                   TOKEN PAYLOAD                       */
 /* ===================================================== */
 
 export interface TokenPayload extends JwtPayload {
@@ -27,10 +28,17 @@ export interface TokenPayload extends JwtPayload {
 /* ===================================================== */
 
 export const signAccessToken = (
-  payload: TokenPayload,
+  payload: { id: string; role?: string },
   expiresIn: SignOptions["expiresIn"] = "1h"
 ): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn });
+  return jwt.sign(
+    {
+      id: payload.id,
+      role: payload.role,
+    },
+    JWT_SECRET,
+    { expiresIn }
+  );
 };
 
 /* ===================================================== */
@@ -38,10 +46,17 @@ export const signAccessToken = (
 /* ===================================================== */
 
 export const signRefreshToken = (
-  payload: TokenPayload,
+  payload: { id: string; role?: string },
   expiresIn: SignOptions["expiresIn"] = "7d"
 ): string => {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn });
+  return jwt.sign(
+    {
+      id: payload.id,
+      role: payload.role,
+    },
+    JWT_REFRESH_SECRET,
+    { expiresIn }
+  );
 };
 
 /* ===================================================== */
@@ -49,9 +64,21 @@ export const signRefreshToken = (
 /* ===================================================== */
 
 export const verifyAccessToken = (token: string): TokenPayload => {
-  return jwt.verify(token, JWT_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+
+  if (!decoded.id) {
+    throw new Error("Invalid token payload");
+  }
+
+  return decoded;
 };
 
 export const verifyRefreshToken = (token: string): TokenPayload => {
-  return jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+  const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as TokenPayload;
+
+  if (!decoded.id) {
+    throw new Error("Invalid refresh token payload");
+  }
+
+  return decoded;
 };

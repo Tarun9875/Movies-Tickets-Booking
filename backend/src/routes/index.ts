@@ -11,12 +11,12 @@ import showSeatsRoutes from "./seats/showSeats.routes";
 const router = Router();
 
 router.use("/auth", authRoutes);
-router.use("/booking", bookingRoutes);
+router.use("/bookings", bookingRoutes);   // ✅ FIXED HERE
 router.use("/movies", movieRoutes);
 router.use("/admin", adminRoutes);
 
 /* 🔥 IMPORTANT ORDER */
-router.use("/shows", showRoutes);        // handles /shows/:id
-router.use("/shows", showSeatsRoutes);   // handles /shows/:id/seats
+router.use("/shows", showRoutes);
+router.use("/shows", showSeatsRoutes);
 
 export default router;

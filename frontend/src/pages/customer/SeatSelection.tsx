@@ -36,7 +36,6 @@ export default function SeatSelection() {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH DATA ================= */
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -45,7 +44,7 @@ export default function SeatSelection() {
 
         const seatRes = await api.get(`/shows/${showId}/seats`);
         setSeatState(seatRes.data);
-      } catch (error: any) {
+      } catch {
         toast.error("Failed to load seat data ❌");
       } finally {
         setLoading(false);
@@ -55,7 +54,6 @@ export default function SeatSelection() {
     if (showId) fetchData();
   }, [showId]);
 
-  /* ================= TOGGLE SEAT ================= */
   const toggleSeat = (seat: string) => {
     if (seatState.booked.includes(seat)) {
       toast.warning("Seat already booked 🔴");
@@ -69,7 +67,6 @@ export default function SeatSelection() {
     );
   };
 
-  /* ================= TOTAL PRICE ================= */
   const calculateTotal = () => {
     if (!show) return 0;
 
@@ -90,7 +87,6 @@ export default function SeatSelection() {
 
   const totalPrice = calculateTotal();
 
-  /* ================= LOADING ================= */
   if (loading) {
     return (
       <PageContainer>
@@ -111,7 +107,6 @@ export default function SeatSelection() {
     );
   }
 
-  /* ================= PROCEED ================= */
   const handleProceed = () => {
     if (selectedSeats.length === 0) {
       toast.warning("Please select seats");
@@ -132,9 +127,20 @@ export default function SeatSelection() {
     <PageContainer>
       <div className="max-w-7xl mx-auto px-6 py-10">
 
+        {/* 🔙 BACK BUTTON */}
+        <button
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 mb-6 text-sm font-medium hover:text-red-500 transition"
+          style={{ color: "var(--text-color)" }}
+        >
+          <span className="text-xl">←</span>
+          Back
+        </button>
+
         <h1 className="text-2xl font-bold mb-2">
           {show.movie.title}
         </h1>
+
         <p className="mb-8 text-sm opacity-70">
           {show.date} | {show.time} | {show.language} | Screen {show.screen}
         </p>
@@ -163,7 +169,7 @@ export default function SeatSelection() {
                           key={seatId}
                           onClick={() => toggleSeat(seatId)}
                           disabled={isBooked}
-                          className="w-8 h-8 text-xs rounded"
+                          className="w-8 h-8 text-xs rounded transition hover:scale-110"
                           style={{
                             backgroundColor: isBooked
                               ? "#dc2626"
@@ -192,11 +198,13 @@ export default function SeatSelection() {
           </div>
 
           {/* SUMMARY */}
-          <div className="p-6 rounded-xl shadow-md h-fit sticky top-10"
-               style={{
-                 backgroundColor: "var(--card-bg)",
-                 border: "1px solid var(--border-color)",
-               }}>
+          <div
+            className="p-6 rounded-xl shadow-md h-fit sticky top-10"
+            style={{
+              backgroundColor: "var(--card-bg)",
+              border: "1px solid var(--border-color)",
+            }}
+          >
             <h2 className="text-lg font-semibold mb-4">
               Booking Summary
             </h2>
@@ -209,7 +217,7 @@ export default function SeatSelection() {
             <button
               onClick={handleProceed}
               disabled={selectedSeats.length === 0}
-              className="mt-6 w-full py-3 rounded-lg text-white"
+              className="mt-6 w-full py-3 rounded-lg text-white transition"
               style={{
                 backgroundColor:
                   selectedSeats.length === 0

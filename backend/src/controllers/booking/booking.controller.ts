@@ -1,106 +1,132 @@
+// src/controllers/booking/booking.controller.ts
+
 import { Request, Response } from "express";
-import {
-  lockSeats,
-  unlockSeats,
-  getLockedSeats
-} from "../../services/booking/seatLock.service";
-import { getIO } from "../../sockets/index";
+import Booking from "../../models/Booking.model";
+import Show from "../../models/Show.model";
 
-// 👇 Define params type properly
-interface ShowParams {
-  showId: string;
-}
-
-// 🔒 LOCK SEATS
-export const lockSeatController = async (req: any, res: Response) => {
-  try {
-    const { showId, seats } = req.body;
-    const userId = req.user?.id;
-
-    if (!showId || !Array.isArray(seats) || seats.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid showId or seats"
-      });
-    }
-
-    await lockSeats(String(showId), seats, userId);
-
-    const io = getIO();
-    io.to(String(showId)).emit("seat-locked", { seats, userId });
-
-    return res.json({
-      success: true,
-      message: "Seats locked successfully"
-    });
-
-  } catch (error: any) {
-    return res.status(400).json({
-      success: false,
-      message: error.message || "Failed to lock seats"
-    });
-  }
-};
-
-
-// 🔓 UNLOCK SEATS
-export const unlockSeatController = async (req: any, res: Response) => {
-  try {
-    const { showId, seats } = req.body;
-    const userId = req.user?.id;
-
-    if (!showId || !Array.isArray(seats) || seats.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid showId or seats"
-      });
-    }
-
-    await unlockSeats(String(showId), seats, userId);
-
-    const io = getIO();
-    io.to(String(showId)).emit("seat-unlocked", { seats, userId });
-
-    return res.json({
-      success: true,
-      message: "Seats unlocked successfully"
-    });
-
-  } catch (error: any) {
-    return res.status(400).json({
-      success: false,
-      message: error.message || "Failed to unlock seats"
-    });
-  }
-};
-
-
-// 👀 GET LOCKED SEATS
-export const lockedSeatsController = async (
-  req: Request<ShowParams>,
+export const createBooking = async (
+  req: Request,
   res: Response
 ) => {
   try {
-    const { showId } = req.params;
+    const { showId, seats, paymentMethod } = req.body;
 
-    if (!showId) {
-      return res.status(400).json({
+    const userId = (req as any).user?.id; // 🔥 from auth middleware
+
+    /* ================= LOGIN CHECK ================= */
+
+    if (!userId) {
+      return res.status(401).json({
         success: false,
-        message: "Show ID is required"
+        message: "Unauthorized - Login required",
       });
     }
 
-    const lockedSeats = await getLockedSeats(showId);
+    /* ================= VALIDATION ================= */
 
-    return res.json({
-      success: true,
-      lockedSeats
+    if (!showId || !Array.isArray(seats) || seats.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking data",
+      });
+    }
+
+    if (!["UPI", "CARD"].includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment method",
+      });
+    }
+
+    /* ================= FETCH SHOW ================= */
+
+    const show = await Show.findById(showId);
+
+    if (!show) {
+      return res.status(404).json({
+        success: false,
+        message: "Show not found",
+      });
+    }
+
+    if (show.status !== "ACTIVE") {
+      return res.status(400).json({
+        success: false,
+        message: "Show is not active",
+      });
+    }
+
+    /* ================= LIMIT CHECK ================= */
+
+    if (seats.length > show.maxSeatsPerBooking) {
+      return res.status(400).json({
+        success: false,
+        message: `Maximum ${show.maxSeatsPerBooking} seats allowed`,
+      });
+    }
+
+    /* ================= DUPLICATE CHECK ================= */
+
+    const alreadyBooked = seats.some((seat: string) =>
+      show.bookedSeats.includes(seat)
+    );
+
+    if (alreadyBooked) {
+      return res.status(400).json({
+        success: false,
+        message: "One or more seats already booked",
+      });
+    }
+
+    /* ================= PRICE CALCULATION ================= */
+
+    let totalAmount = 0;
+
+    show.seatCategories.forEach((category) => {
+      category.rows.forEach((row) => {
+        seats.forEach((seat: string) => {
+          if (seat.startsWith(row)) {
+            totalAmount += category.price * show.weekendMultiplier;
+          }
+        });
+      });
     });
 
-  } catch (error: any) {
+    if (totalAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid seat pricing",
+      });
+    }
+
+    /* ================= SAVE SEATS ================= */
+
+    show.bookedSeats.push(...seats);
+    await show.save();
+
+    /* ================= CREATE BOOKING ================= */
+
+    const booking = await Booking.create({
+      user: userId, // ✅ FIXED HERE
+      show: showId,
+      seats,
+      totalAmount,
+      paymentMethod,
+      status: "CONFIRMED",
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Booking confirmed",
+      booking,
+    });
+
+  } catch (error) {
+    console.error("Booking Error:", error);
+
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch locked seats"
+      message: "Booking failed",
     });
   }
 };

@@ -1,10 +1,11 @@
+// src/models/Show.model.ts
 import mongoose, { Document, Schema } from "mongoose";
 
 /* ================================
    SEAT CATEGORY INTERFACE
 ================================ */
 interface ISeatCategory {
-  type: string; // VIP / PREMIUM / EXECUTIVE / NORMAL
+  type: string;
   price: number;
   rows: string[];
   seatsPerRow: number;
@@ -21,9 +22,12 @@ export interface IShow extends Document {
   language: string;
   format: "2D" | "3D" | "IMAX" | "Dolby";
   seatCategories: ISeatCategory[];
+
   totalSeats: number;
   maxSeatsPerBooking: number;
   weekendMultiplier: number;
+
+  bookedSeats: string[];
   status: "ACTIVE" | "CANCELLED";
 }
 
@@ -114,6 +118,11 @@ const showSchema = new Schema<IShow>(
       min: 1,
     },
 
+    bookedSeats: {
+      type: [String],
+      default: [],
+    },
+
     status: {
       type: String,
       enum: ["ACTIVE", "CANCELLED"],
@@ -125,7 +134,6 @@ const showSchema = new Schema<IShow>(
 
 /* ================================
    UNIQUE INDEX
-   Prevent same screen + date + time
 ================================ */
 showSchema.index(
   { screen: 1, date: 1, time: 1 },
@@ -147,9 +155,9 @@ showSchema.pre("save", function () {
 
   show.totalSeats = total;
 
-  // Weekend pricing
   const day = show.date.getDay(); // 0=Sunday, 6=Saturday
-  show.weekendMultiplier = day === 0 || day === 6 ? 1.2 : 1;
+  show.weekendMultiplier =
+    day === 0 || day === 6 ? 1.2 : 1;
 });
 
 /* ================================

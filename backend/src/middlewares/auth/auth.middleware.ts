@@ -1,4 +1,5 @@
-//backend/src/middlewares/auth/auth.middleware.ts
+// backend/src/middlewares/auth/auth.middleware.ts
+
 import { Request, Response, NextFunction } from "express";
 import redis from "../../config/redis";
 import { verifyAccessToken } from "../../utils/jwt";
@@ -15,29 +16,42 @@ export const authMiddleware = async (
   try {
     const authHeader = req.headers.authorization;
 
-    // 🔹 Check header
+    /* ================= HEADER CHECK ================= */
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const token = authHeader.split(" ")[1];
 
-    // 🔹 Verify JWT (ACCESS TOKEN)
-    const decoded = verifyAccessToken(token);
+    /* ================= VERIFY TOKEN ================= */
+    const decoded: any = verifyAccessToken(token);
 
-    // 🔹 Check Redis session
-    const redisToken = await redis.get(`auth:${decoded.id}`);
+    // 🔥 SAFELY EXTRACT USER ID
+    const userId = decoded?.id || decoded?._id || decoded?.userId;
 
-    if (!redisToken || redisToken !== token) {
-      return res.status(401).json({ message: "Session expired" });
+    if (!userId) {
+      return res.status(401).json({
+        message: "Invalid token payload",
+      });
     }
 
-    // 🔹 Attach user to request
-    req.user = decoded;
+    /* ================= REDIS SESSION CHECK ================= */
+    const redisToken = await redis.get(`auth:${userId}`);
+
+    if (!redisToken || redisToken !== token) {
+      return res.status(401).json({
+        message: "Session expired",
+      });
+    }
+
+    /* ================= ATTACH USER ================= */
+    req.user = { id: userId };
 
     next();
 
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
   }
 };

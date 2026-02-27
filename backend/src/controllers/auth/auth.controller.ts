@@ -30,9 +30,12 @@ export const login = async (req: any, res: any) => {
 
     const data = await authService.loginUser(email, password);
 
+    // Make sure accessToken is returned clearly
     res.status(200).json({
       success: true,
-      ...data
+      user: data.user,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken
     });
 
   } catch (error: any) {

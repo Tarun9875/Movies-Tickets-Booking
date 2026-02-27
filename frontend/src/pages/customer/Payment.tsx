@@ -1,118 +1,138 @@
 // frontend/src/pages/customer/Payment.tsx
 
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageContainer from "../../components/layout/PageContainer";
+import { useAppSelector } from "../../app/hooks";
+import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 export default function Payment() {
   const { showId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAppSelector((state) => state.auth);
+
+  const bookingData = location.state;
+
+  const [ready, setReady] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "CARD">("UPI");
+  const [upiId, setUpiId] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [processing, setProcessing] = useState(false);
+
+  /* ================= SAFE PAGE LOAD ================= */
+  useEffect(() => {
+    if (!bookingData) {
+      navigate("/");
+    } else {
+      setReady(true);
+    }
+  }, [bookingData, navigate]);
+
+  if (!ready) return null;
 
   const {
     movieTitle,
-    selectedSeats,
+    selectedSeats = [],
     selectedDate,
     selectedTime,
     selectedLanguage,
-    totalPrice,
-  } = location.state || {};
-
-  const [paymentMethod, setPaymentMethod] = useState("UPI");
-  const [processing, setProcessing] = useState(false);
-
-  if (!movieTitle) {
-    navigate("/");
-    return null;
-  }
+    totalPrice = 0,
+  } = bookingData;
 
   const convenienceFee = 40;
   const gst = Math.round(totalPrice * 0.18);
   const grandTotal = totalPrice + convenienceFee + gst;
 
-  const handlePayment = () => {
-    setProcessing(true);
+  /* ================= HANDLE PAYMENT ================= */
+  const handlePayment = async () => {
+    try {
+      if (!user) {
+        toast.warning("Please login first");
+        navigate("/login");
+        return;
+      }
 
-    setTimeout(() => {
-      const bookingId = "MB" + Math.floor(Math.random() * 1000000);
-      navigate(`/my-bookings/${bookingId}`, {
-        state: {
-          bookingId,
-          movieTitle,
-          selectedSeats,
-          selectedDate,
-          selectedTime,
-          selectedLanguage,
-          grandTotal,
-        },
+      if (paymentMethod === "UPI" && !upiId.trim()) {
+        toast.error("Enter UPI ID");
+        return;
+      }
+
+      if (
+        paymentMethod === "CARD" &&
+        (!cardNumber.trim() || !expiry.trim() || !cvv.trim())
+      ) {
+        toast.error("Fill all card details");
+        return;
+      }
+
+      setProcessing(true);
+
+      const res = await api.post("/bookings", {
+        showId,
+        seats: selectedSeats,
+        paymentMethod,
       });
-    }, 2000);
+
+      toast.success("Booking Confirmed 🎉");
+
+      navigate(`/my-bookings/${res.data.booking._id}`, {
+        state: res.data.booking,
+      });
+
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Payment failed ❌"
+      );
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
     <PageContainer>
-      <div
-        className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-10"
-        style={{ backgroundColor: "var(--background-color)" }}
-      >
-        {/* Booking Summary */}
-        <div
-          className="rounded-xl p-6"
-          style={{
-            backgroundColor: "var(--card-bg)",
-            border: "1px solid var(--border-color)",
-          }}
-        >
-          <h2
-            className="text-xl font-semibold mb-6"
-            style={{ color: "var(--text-color)" }}
-          >
+      <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+        {/* BOOKING SUMMARY */}
+        <div className="rounded-xl p-6 border shadow-md">
+          <h2 className="text-xl font-semibold mb-6">
             🎟 Booking Summary
           </h2>
 
-          <p style={{ color: "var(--muted-text)" }}>
-            Movie: {movieTitle}
-          </p>
-          <p style={{ color: "var(--muted-text)" }}>
-            Date: {selectedDate}
-          </p>
-          <p style={{ color: "var(--muted-text)" }}>
-            Time: {selectedTime}
-          </p>
-          <p style={{ color: "var(--muted-text)" }}>
-            Language: {selectedLanguage}
-          </p>
-          <p style={{ color: "var(--muted-text)" }}>
-            Seats: {selectedSeats.join(", ")}
-          </p>
+          {user && (
+            <>
+              <p><strong>User:</strong> {user.name}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+              <hr className="my-4" />
+            </>
+          )}
+
+          <p>Movie: {movieTitle}</p>
+          <p>Date: {selectedDate}</p>
+          <p>Time: {selectedTime}</p>
+          <p>Language: {selectedLanguage}</p>
+          <p>Seats: {selectedSeats.join(", ")}</p>
 
           <hr className="my-4" />
 
           <p>Seat Total: ₹{totalPrice}</p>
           <p>Convenience Fee: ₹{convenienceFee}</p>
-          <p>GST (18%): ₹{gst}</p>
+          <p>GST: ₹{gst}</p>
 
           <h3 className="mt-4 text-lg font-bold">
             Grand Total: ₹{grandTotal}
           </h3>
         </div>
 
-        {/* Payment Section */}
-        <div
-          className="rounded-xl p-6"
-          style={{
-            backgroundColor: "var(--card-bg)",
-            border: "1px solid var(--border-color)",
-          }}
-        >
-          <h2
-            className="text-xl font-semibold mb-6"
-            style={{ color: "var(--text-color)" }}
-          >
+        {/* PAYMENT SECTION */}
+        <div className="rounded-xl p-6 border shadow-md">
+          <h2 className="text-xl font-semibold mb-6">
             💳 Secure Payment
           </h2>
 
-          {/* Payment Options */}
           <div className="space-y-4 mb-6">
             <button
               onClick={() => setPaymentMethod("UPI")}
@@ -137,9 +157,10 @@ export default function Payment() {
             </button>
           </div>
 
-          {/* Dummy Inputs */}
           {paymentMethod === "UPI" && (
             <input
+              value={upiId}
+              onChange={(e) => setUpiId(e.target.value)}
               placeholder="Enter UPI ID"
               className="w-full p-3 rounded-lg border mb-4"
             />
@@ -148,16 +169,23 @@ export default function Payment() {
           {paymentMethod === "CARD" && (
             <>
               <input
+                value={cardNumber}
+                onChange={(e) => setCardNumber(e.target.value)}
                 placeholder="Card Number"
                 className="w-full p-3 rounded-lg border mb-3"
               />
               <div className="flex gap-3">
                 <input
+                  value={expiry}
+                  onChange={(e) => setExpiry(e.target.value)}
                   placeholder="MM/YY"
                   className="w-1/2 p-3 rounded-lg border"
                 />
                 <input
+                  value={cvv}
+                  onChange={(e) => setCvv(e.target.value)}
                   placeholder="CVV"
+                  type="password"
                   className="w-1/2 p-3 rounded-lg border"
                 />
               </div>
@@ -171,10 +199,6 @@ export default function Payment() {
           >
             {processing ? "Processing..." : `Pay ₹${grandTotal}`}
           </button>
-
-          <p className="mt-4 text-xs text-center opacity-60">
-            🔐 100% Secure Checkout
-          </p>
         </div>
       </div>
     </PageContainer>
