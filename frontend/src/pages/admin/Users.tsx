@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 interface User {
   _id: string;
   name: string;
   email: string;
-  role: string;
-  status: string;
+  role: "ADMIN" | "USER";
+  status: "ACTIVE" | "INACTIVE";
   createdAt: string;
 }
 
@@ -19,14 +20,15 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
 
-  // ================= FETCH USERS =================
+  /* ================= FETCH USERS ================= */
   const fetchUsers = async () => {
     try {
       const res = await api.get("/users");
-      setUsers(res.data.users);
-      setFiltered(res.data.users);
-    } catch {
-      console.log("Users API failed");
+      const data = res.data.users || [];
+      setUsers(data);
+      setFiltered(data);
+    } catch (error) {
+      toast.error("Failed to load users");
     } finally {
       setLoading(false);
     }
@@ -36,7 +38,7 @@ export default function AdminUsers() {
     fetchUsers();
   }, []);
 
-  // ================= SEARCH + FILTER =================
+  /* ================= SEARCH + FILTER ================= */
   useEffect(() => {
     let updated = [...users];
 
@@ -53,31 +55,43 @@ export default function AdminUsers() {
     setFiltered(updated);
   }, [search, roleFilter, users]);
 
-  // ================= DELETE USER =================
+  /* ================= DELETE USER ================= */
   const handleDelete = async (id: string) => {
     if (!window.confirm("Delete this user?")) return;
 
     try {
       await api.delete(`/users/${id}`);
-      fetchUsers();
+
+      // Remove from state directly (no full reload)
+      setUsers((prev) => prev.filter((u) => u._id !== id));
+
+      toast.success("User deleted");
     } catch {
-      alert("Delete failed");
+      toast.error("Delete failed");
     }
   };
 
-  // ================= TOGGLE STATUS =================
+  /* ================= TOGGLE STATUS ================= */
   const toggleStatus = async (user: User) => {
     const newStatus =
       user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
 
     try {
       await api.put(`/users/${user._id}`, {
-        ...user,
         status: newStatus,
       });
-      fetchUsers();
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === user._id
+            ? { ...u, status: newStatus }
+            : u
+        )
+      );
+
+      toast.success(`User ${newStatus}`);
     } catch {
-      alert("Status update failed");
+      toast.error("Status update failed");
     }
   };
 

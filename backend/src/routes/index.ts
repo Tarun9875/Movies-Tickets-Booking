@@ -7,7 +7,7 @@ import movieRoutes from "./movie/movie.routes";
 import adminRoutes from "./admin/admin.routes";
 import showRoutes from "./show/show.routes";
 import showSeatsRoutes from "./seats/showSeats.routes";
-
+import userRoute from "./user/user.route";
 const router = Router();
 
 router.use("/auth", authRoutes);
@@ -19,4 +19,5 @@ router.use("/admin", adminRoutes);
 router.use("/shows", showRoutes);
 router.use("/shows", showSeatsRoutes);
 
+router.use("/users", userRoute);
 export default router;

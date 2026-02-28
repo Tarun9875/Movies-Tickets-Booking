@@ -29,7 +29,7 @@ export interface TokenPayload extends JwtPayload {
 
 export const signAccessToken = (
   payload: { id: string; role?: string },
-  expiresIn: SignOptions["expiresIn"] = "1h"
+  expiresIn: SignOptions["expiresIn"] = "1d"
 ): string => {
   return jwt.sign(
     {

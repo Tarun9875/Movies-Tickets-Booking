@@ -36,6 +36,10 @@ export default function SeatSelection() {
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
+  /* ===============================
+     FETCH SHOW & SEATS
+  =============================== */
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,6 +58,10 @@ export default function SeatSelection() {
     if (showId) fetchData();
   }, [showId]);
 
+  /* ===============================
+     TOGGLE SEAT
+  =============================== */
+
   const toggleSeat = (seat: string) => {
     if (seatState.booked.includes(seat)) {
       toast.warning("Seat already booked 🔴");
@@ -66,6 +74,10 @@ export default function SeatSelection() {
         : [...prev, seat]
     );
   };
+
+  /* ===============================
+     CALCULATE TOTAL
+  =============================== */
 
   const calculateTotal = () => {
     if (!show) return 0;
@@ -87,6 +99,10 @@ export default function SeatSelection() {
 
   const totalPrice = calculateTotal();
 
+  /* ===============================
+     LOADING STATE
+  =============================== */
+
   if (loading) {
     return (
       <PageContainer>
@@ -107,6 +123,10 @@ export default function SeatSelection() {
     );
   }
 
+  /* ===============================
+     PROCEED TO PAYMENT
+  =============================== */
+
   const handleProceed = () => {
     if (selectedSeats.length === 0) {
       toast.warning("Please select seats");
@@ -119,15 +139,22 @@ export default function SeatSelection() {
         movieTitle: show.movie.title,
         selectedSeats,
         totalPrice,
+        selectedDate: show.date,
+        selectedTime: show.time,
+        selectedLanguage: show.language,
       },
     });
   };
+
+  /* ===============================
+     UI
+  =============================== */
 
   return (
     <PageContainer>
       <div className="max-w-7xl mx-auto px-6 py-10">
 
-        {/* 🔙 BACK BUTTON */}
+        {/* BACK BUTTON */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 mb-6 text-sm font-medium hover:text-red-500 transition"
@@ -137,6 +164,7 @@ export default function SeatSelection() {
           Back
         </button>
 
+        {/* SHOW DETAILS */}
         <h1 className="text-2xl font-bold mb-2">
           {show.movie.title}
         </h1>
@@ -147,17 +175,19 @@ export default function SeatSelection() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-          {/* SEATS */}
+          {/* SEAT GRID */}
           <div className="lg:col-span-2">
 
             {show.seatCategories.map((category) => (
               <div key={category.type} className="mb-10">
+
                 <h2 className="text-center font-semibold mb-4">
                   ₹{category.price} {category.type}
                 </h2>
 
                 {category.rows.map((row) => (
                   <div key={row} className="flex justify-center gap-2 mb-3">
+
                     {Array.from({ length: category.seatsPerRow }).map((_, index) => {
                       const seatId = `${row}${index + 1}`;
 
@@ -176,7 +206,10 @@ export default function SeatSelection() {
                               : isSelected
                               ? "#16a34a"
                               : "var(--card-bg)",
-                            color: isBooked || isSelected ? "#fff" : "var(--text-color)",
+                            color:
+                              isBooked || isSelected
+                                ? "#fff"
+                                : "var(--text-color)",
                             border: "1px solid var(--border-color)",
                           }}
                         >
@@ -197,7 +230,7 @@ export default function SeatSelection() {
             </p>
           </div>
 
-          {/* SUMMARY */}
+          {/* BOOKING SUMMARY */}
           <div
             className="p-6 rounded-xl shadow-md h-fit sticky top-10"
             style={{
@@ -209,7 +242,8 @@ export default function SeatSelection() {
               Booking Summary
             </h2>
 
-            <p>Seats: {selectedSeats.join(", ") || "None"}</p>
+            <p><strong>Seats:</strong> {selectedSeats.join(", ") || "None"}</p>
+
             <p className="mt-4 font-bold text-lg">
               Total: ₹{totalPrice}
             </p>

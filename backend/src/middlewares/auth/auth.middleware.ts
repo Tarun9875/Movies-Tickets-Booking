@@ -1,8 +1,8 @@
 // backend/src/middlewares/auth/auth.middleware.ts
 
 import { Request, Response, NextFunction } from "express";
-import redis from "../../config/redis";
 import { verifyAccessToken } from "../../utils/jwt";
+import User from "../../models/User.model";
 
 interface AuthRequest extends Request {
   user?: any;
@@ -18,7 +18,7 @@ export const authMiddleware = async (
 
     /* ================= HEADER CHECK ================= */
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ message: "Unauthorized - No token" });
     }
 
     const token = authHeader.split(" ")[1];
@@ -26,7 +26,6 @@ export const authMiddleware = async (
     /* ================= VERIFY TOKEN ================= */
     const decoded: any = verifyAccessToken(token);
 
-    // 🔥 SAFELY EXTRACT USER ID
     const userId = decoded?.id || decoded?._id || decoded?.userId;
 
     if (!userId) {
@@ -35,12 +34,12 @@ export const authMiddleware = async (
       });
     }
 
-    /* ================= REDIS SESSION CHECK ================= */
-    const redisToken = await redis.get(`auth:${userId}`);
+    /* ================= OPTIONAL USER CHECK ================= */
+    const userExists = await User.findById(userId);
 
-    if (!redisToken || redisToken !== token) {
+    if (!userExists) {
       return res.status(401).json({
-        message: "Session expired",
+        message: "User not found",
       });
     }
 

@@ -2,19 +2,20 @@
 
 import { useEffect, useState } from "react";
 import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 interface Booking {
   _id: string;
-  user?: { name: string; email: string };
-  show?: {
-    movie?: { title: string };
-    date: string;
-    time: string;
-  };
+  name: string;
+  email: string;
+  movieTitle: string;
+  selectedDate: string;
+  selectedTime: string;
+  selectedLanguage: string;
   seats: string[];
   totalAmount: number;
-  paymentStatus: string;
-  bookingStatus: string;
+  paymentMethod: string;
+  status: "CONFIRMED" | "CANCELLED";
   createdAt: string;
 }
 
@@ -25,14 +26,15 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
 
-  // ================= FETCH BOOKINGS =================
+  /* ================= FETCH BOOKINGS ================= */
   const fetchBookings = async () => {
     try {
       const res = await api.get("/bookings");
-      setBookings(res.data.bookings);
-      setFiltered(res.data.bookings);
+      const data = res.data.bookings || [];
+      setBookings(data);
+      setFiltered(data);
     } catch {
-      console.log("Using empty bookings fallback");
+      toast.error("Failed to load bookings");
     } finally {
       setLoading(false);
     }
@@ -42,13 +44,13 @@ export default function AdminBookings() {
     fetchBookings();
   }, []);
 
-  // ================= SEARCH + FILTER =================
+  /* ================= SEARCH + FILTER ================= */
   useEffect(() => {
     let updated = [...bookings];
 
     if (search.trim()) {
       updated = updated.filter((b) =>
-        b.show?.movie?.title
+        b.movieTitle
           ?.toLowerCase()
           .includes(search.toLowerCase())
       );
@@ -56,22 +58,34 @@ export default function AdminBookings() {
 
     if (statusFilter !== "ALL") {
       updated = updated.filter(
-        (b) => b.bookingStatus === statusFilter
+        (b) => b.status === statusFilter
       );
     }
 
     setFiltered(updated);
   }, [search, statusFilter, bookings]);
 
-  // ================= CANCEL BOOKING =================
-  const cancelBooking = async (id: string) => {
-    if (!window.confirm("Cancel this booking?")) return;
+  /* ================= UPDATE STATUS ================= */
+  const updateStatus = async (
+    id: string,
+    newStatus: "CONFIRMED" | "CANCELLED"
+  ) => {
+    if (!window.confirm(`Change status to ${newStatus}?`)) return;
 
     try {
-      await api.put(`/bookings/${id}/cancel`);
-      fetchBookings();
+      await api.put(`/bookings/${id}/status`, {
+        status: newStatus,
+      });
+
+      setBookings((prev) =>
+        prev.map((b) =>
+          b._id === id ? { ...b, status: newStatus } : b
+        )
+      );
+
+      toast.success(`Booking ${newStatus}`);
     } catch {
-      alert("Cancel failed");
+      toast.error("Status update failed");
     }
   };
 
@@ -148,67 +162,75 @@ export default function AdminBookings() {
               border: "1px solid var(--border-color)",
             }}
           >
+            {/* MOVIE TITLE */}
             <h2 className="font-semibold text-lg mb-2">
-              {booking.show?.movie?.title}
+              {booking.movieTitle}
             </h2>
 
             <div
               className="text-sm space-y-1"
               style={{ color: "var(--muted-text)" }}
             >
-              <p>📅 {booking.show?.date}</p>
-              <p>⏰ {booking.show?.time}</p>
-              <p>👤 {booking.user?.name}</p>
-              <p>📧 {booking.user?.email}</p>
+              <p>📅 {booking.selectedDate}</p>
+              <p>⏰ {booking.selectedTime}</p>
+              <p>🌐 {booking.selectedLanguage}</p>
+              <p>👤 {booking.name}</p>
+              <p>📧 {booking.email}</p>
               <p>🎟 Seats: {booking.seats.join(", ")}</p>
               <p>💰 ₹{booking.totalAmount}</p>
+              <p>💳 {booking.paymentMethod}</p>
               <p>
                 🕒 {new Date(booking.createdAt).toLocaleString()}
               </p>
             </div>
 
-            {/* STATUS BADGES */}
-            <div className="flex justify-between items-center mt-4">
-              <span
-                className="px-3 py-1 text-xs rounded-full font-medium"
-                style={{
-                  backgroundColor:
-                    booking.paymentStatus === "PAID"
-                      ? "#16a34a"
-                      : "#f59e0b",
-                  color: "#fff",
-                }}
-              >
-                {booking.paymentStatus}
-              </span>
+            {/* STATUS + SELECT */}
+            <div className="mt-5 space-y-3">
 
+              {/* STATUS BADGE */}
               <span
-                className="px-3 py-1 text-xs rounded-full font-medium"
+                className="px-3 py-1 text-xs rounded-full font-medium inline-block"
                 style={{
                   backgroundColor:
-                    booking.bookingStatus === "CONFIRMED"
-                      ? "#2563eb"
+                    booking.status === "CONFIRMED"
+                      ? "#16a34a"
                       : "#dc2626",
                   color: "#fff",
                 }}
               >
-                {booking.bookingStatus}
+                {booking.status}
               </span>
-            </div>
 
-            {/* ACTION */}
-            {booking.bookingStatus !== "CANCELLED" && (
-              <button
-                onClick={() => cancelBooking(booking._id)}
-                className="w-full mt-4 py-2 rounded-lg text-sm"
+              {/* STATUS SELECT */}
+              <select
+                value={booking.status}
+                onChange={(e) =>
+                  updateStatus(
+                    booking._id,
+                    e.target.value as
+                      | "CONFIRMED"
+                      | "CANCELLED"
+                  )
+                }
+                className="w-full py-2 px-3 rounded-lg text-sm font-medium"
                 style={{
-                  backgroundColor: "#dc2626",
+                  backgroundColor:
+                    booking.status === "CONFIRMED"
+                      ? "#16a34a"
+                      : "#dc2626",
                   color: "#fff",
+                  border: "none",
                 }}
               >
-                Cancel Booking
-              </button>
-            )}
+                <option value="CONFIRMED">
+                  CONFIRMED
+                </option>
+                <option value="CANCELLED">
+                  CANCELLED
+                </option>
+              </select>
+
+            </div>
           </div>
         ))}
       </div>

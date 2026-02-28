@@ -1,9 +1,9 @@
 // frontend/src/pages/customer/Payment.tsx
 
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
-import PageContainer from "../../components/layout/PageContainer";
+import { useState } from "react";
 import { useAppSelector } from "../../app/hooks";
+import PageContainer from "../../components/layout/PageContainer";
 import api from "../../services/axios";
 import { toast } from "react-toastify";
 
@@ -15,57 +15,42 @@ export default function Payment() {
 
   const bookingData = location.state;
 
-  const [ready, setReady] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"UPI" | "CARD">("UPI");
+  if (!bookingData) {
+    navigate("/");
+    return null;
+  }
+
+  const {
+    movieTitle,
+    selectedSeats,
+    selectedDate,
+    selectedTime,
+    selectedLanguage,
+    totalPrice,
+  } = bookingData;
+
+  const [paymentMethod, setPaymentMethod] =
+    useState<"UPI" | "CARD">("UPI");
+
   const [upiId, setUpiId] = useState("");
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
+
   const [processing, setProcessing] = useState(false);
 
-  /* ================= SAFE PAGE LOAD ================= */
-  useEffect(() => {
-    if (!bookingData) {
-      navigate("/");
-    } else {
-      setReady(true);
-    }
-  }, [bookingData, navigate]);
-
-  if (!ready) return null;
-
-  const {
-    movieTitle,
-    selectedSeats = [],
-    selectedDate,
-    selectedTime,
-    selectedLanguage,
-    totalPrice = 0,
-  } = bookingData;
-
-  const convenienceFee = 40;
-  const gst = Math.round(totalPrice * 0.18);
-  const grandTotal = totalPrice + convenienceFee + gst;
-
-  /* ================= HANDLE PAYMENT ================= */
   const handlePayment = async () => {
     try {
-      if (!user) {
-        toast.warning("Please login first");
-        navigate("/login");
-        return;
-      }
-
-      if (paymentMethod === "UPI" && !upiId.trim()) {
+      if (paymentMethod === "UPI" && !upiId) {
         toast.error("Enter UPI ID");
         return;
       }
 
       if (
         paymentMethod === "CARD" &&
-        (!cardNumber.trim() || !expiry.trim() || !cvv.trim())
+        (!cardNumber || !expiry || !cvv)
       ) {
-        toast.error("Fill all card details");
+        toast.error("Enter card details");
         return;
       }
 
@@ -75,17 +60,23 @@ export default function Payment() {
         showId,
         seats: selectedSeats,
         paymentMethod,
+        name: user?.name,
+        email: user?.email,
+        movieTitle,
+        selectedDate,
+        selectedTime,
+        selectedLanguage,
+        totalAmount: totalPrice,
       });
 
       toast.success("Booking Confirmed 🎉");
 
-      navigate(`/my-bookings/${res.data.booking._id}`, {
-        state: res.data.booking,
-      });
+      navigate(`/my-bookings/${res.data.booking._id}`);
 
     } catch (error: any) {
       toast.error(
-        error.response?.data?.message || "Payment failed ❌"
+        error.response?.data?.message ||
+          "Payment failed ❌"
       );
     } finally {
       setProcessing(false);
@@ -94,99 +85,95 @@ export default function Payment() {
 
   return (
     <PageContainer>
-      <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="max-w-6xl mx-auto p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
 
         {/* BOOKING SUMMARY */}
-        <div className="rounded-xl p-6 border shadow-md">
-          <h2 className="text-xl font-semibold mb-6">
-            🎟 Booking Summary
+        <div className="border p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">
+            Booking Summary
           </h2>
 
-          {user && (
-            <>
-              <p><strong>User:</strong> {user.name}</p>
-              <p><strong>Email:</strong> {user.email}</p>
-              <hr className="my-4" />
-            </>
-          )}
+          <p><strong>Name:</strong> {user?.name}</p>
+          <p><strong>Email:</strong> {user?.email}</p>
 
-          <p>Movie: {movieTitle}</p>
-          <p>Date: {selectedDate}</p>
-          <p>Time: {selectedTime}</p>
-          <p>Language: {selectedLanguage}</p>
-          <p>Seats: {selectedSeats.join(", ")}</p>
-
-          <hr className="my-4" />
-
-          <p>Seat Total: ₹{totalPrice}</p>
-          <p>Convenience Fee: ₹{convenienceFee}</p>
-          <p>GST: ₹{gst}</p>
-
-          <h3 className="mt-4 text-lg font-bold">
-            Grand Total: ₹{grandTotal}
-          </h3>
+          <p><strong>Movie:</strong> {movieTitle}</p>
+          <p><strong>Date:</strong> {selectedDate}</p>
+          <p><strong>Time:</strong> {selectedTime}</p>
+          <p><strong>Language:</strong> {selectedLanguage}</p>
+          <p><strong>Seats:</strong> {selectedSeats.join(", ")}</p>
+          <p className="mt-3 font-bold">
+            Total: ₹{totalPrice}
+          </p>
         </div>
 
         {/* PAYMENT SECTION */}
-        <div className="rounded-xl p-6 border shadow-md">
-          <h2 className="text-xl font-semibold mb-6">
-            💳 Secure Payment
+        <div className="border p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">
+            Payment
           </h2>
 
-          <div className="space-y-4 mb-6">
+          {/* Payment Method Selection */}
+          <div className="flex gap-4 mb-4">
             <button
               onClick={() => setPaymentMethod("UPI")}
-              className={`w-full py-3 rounded-lg ${
+              className={`px-4 py-2 rounded ${
                 paymentMethod === "UPI"
                   ? "bg-red-600 text-white"
                   : "bg-gray-200"
               }`}
             >
-              Pay via UPI
+              UPI
             </button>
 
             <button
               onClick={() => setPaymentMethod("CARD")}
-              className={`w-full py-3 rounded-lg ${
+              className={`px-4 py-2 rounded ${
                 paymentMethod === "CARD"
                   ? "bg-red-600 text-white"
                   : "bg-gray-200"
               }`}
             >
-              Pay via Card
+              Debit / Credit Card
             </button>
           </div>
 
+          {/* UPI */}
           {paymentMethod === "UPI" && (
             <input
+              type="text"
+              placeholder="Enter UPI ID"
               value={upiId}
               onChange={(e) => setUpiId(e.target.value)}
-              placeholder="Enter UPI ID"
-              className="w-full p-3 rounded-lg border mb-4"
+              className="w-full p-3 border rounded mb-4"
             />
           )}
 
+          {/* CARD */}
           {paymentMethod === "CARD" && (
             <>
               <input
+                type="text"
+                placeholder="Card Number"
                 value={cardNumber}
                 onChange={(e) => setCardNumber(e.target.value)}
-                placeholder="Card Number"
-                className="w-full p-3 rounded-lg border mb-3"
+                className="w-full p-3 border rounded mb-3"
               />
+
               <div className="flex gap-3">
                 <input
+                  type="text"
+                  placeholder="MM/YY"
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  placeholder="MM/YY"
-                  className="w-1/2 p-3 rounded-lg border"
+                  className="w-1/2 p-3 border rounded"
                 />
+
                 <input
+                  type="password"
+                  placeholder="CVV"
                   value={cvv}
                   onChange={(e) => setCvv(e.target.value)}
-                  placeholder="CVV"
-                  type="password"
-                  className="w-1/2 p-3 rounded-lg border"
+                  className="w-1/2 p-3 border rounded"
                 />
               </div>
             </>
@@ -195,9 +182,9 @@ export default function Payment() {
           <button
             onClick={handlePayment}
             disabled={processing}
-            className="mt-6 w-full py-3 rounded-lg text-white bg-red-600 hover:bg-red-700"
+            className="mt-6 w-full py-3 rounded bg-red-600 text-white"
           >
-            {processing ? "Processing..." : `Pay ₹${grandTotal}`}
+            {processing ? "Processing..." : "Confirm Booking"}
           </button>
         </div>
       </div>

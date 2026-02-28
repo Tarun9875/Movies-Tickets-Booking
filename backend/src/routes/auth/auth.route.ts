@@ -1,3 +1,4 @@
+// ================= AUTH ROUTES =================
 import { Router } from "express";
 import {
   register,

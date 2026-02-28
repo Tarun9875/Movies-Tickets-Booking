@@ -18,6 +18,8 @@ import NewPassword from "../pages/auth/NewPassword";
 import Contact from "../pages/customer/Contact";
 import About from "../pages/customer/About";
 
+import Ticket from "../pages/customer/Ticket";
+
 // ================= ADMIN =================
 import AdminLayout from "../pages/admin/AdminLayout";
 import AdminDashboard from "../pages/admin/Dashboard";
@@ -99,6 +101,24 @@ export default function AppRoutes() {
         {/* ================= CUSTOMER PAGES ================= */}
         <Route path="/contact" element={<Contact />} />
         <Route path="/about" element={<About />} />
+
+       {/*  /// ================= TICKET ================= */}
+       <Route
+          path="/ticket"
+          element={
+            <ProtectedRoute>
+              <Ticket />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ticket/:bookingId"
+          element={
+            <ProtectedRoute>
+              <Ticket />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ================= ADMIN ================= */}
         <Route
