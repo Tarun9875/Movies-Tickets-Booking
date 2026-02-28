@@ -4,12 +4,12 @@ import { Request, Response, NextFunction } from "express";
 import { verifyAccessToken } from "../../utils/jwt";
 import User from "../../models/User.model";
 
-interface AuthRequest extends Request {
-  user?: any;
-}
+/* =====================================================
+   AUTH PROTECT MIDDLEWARE
+===================================================== */
 
-export const authMiddleware = async (
-  req: AuthRequest,
+export const protect = async (
+  req: any,
   res: Response,
   next: NextFunction
 ) => {
@@ -18,7 +18,9 @@ export const authMiddleware = async (
 
     /* ================= HEADER CHECK ================= */
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Unauthorized - No token" });
+      return res.status(401).json({
+        message: "Unauthorized - No token",
+      });
     }
 
     const token = authHeader.split(" ")[1];
@@ -26,7 +28,8 @@ export const authMiddleware = async (
     /* ================= VERIFY TOKEN ================= */
     const decoded: any = verifyAccessToken(token);
 
-    const userId = decoded?.id || decoded?._id || decoded?.userId;
+    const userId =
+      decoded?.id || decoded?._id || decoded?.userId;
 
     if (!userId) {
       return res.status(401).json({
@@ -34,7 +37,7 @@ export const authMiddleware = async (
       });
     }
 
-    /* ================= OPTIONAL USER CHECK ================= */
+    /* ================= CHECK USER EXISTS ================= */
     const userExists = await User.findById(userId);
 
     if (!userExists) {
@@ -44,10 +47,13 @@ export const authMiddleware = async (
     }
 
     /* ================= ATTACH USER ================= */
-    req.user = { id: userId };
+    req.user = {
+      id: userExists._id.toString(),
+      role: userExists.role,
+      email: userExists.email,
+    };
 
     next();
-
   } catch (error) {
     return res.status(401).json({
       message: "Invalid or expired token",

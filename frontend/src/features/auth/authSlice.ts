@@ -1,8 +1,5 @@
-//frontend/src/features/auth/authSlice.ts
-// frontend/src/features/auth/authSlice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-
 import { loginAPI, registerAPI } from "./authAPI";
 
 interface User {
@@ -21,7 +18,7 @@ interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem("token"),
+  token: localStorage.getItem("accessToken"), // ✅ FIXED
   loading: false
 };
 
@@ -52,7 +49,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     /* ============================
-       SET CREDENTIALS (For Google)
+       SET CREDENTIALS (Google)
     ============================= */
     setCredentials: (
       state,
@@ -60,7 +57,9 @@ const authSlice = createSlice({
     ) => {
       state.user = action.payload.user;
       state.token = action.payload.token;
-      localStorage.setItem("token", action.payload.token);
+
+      // ✅ STORE CORRECT KEY
+      localStorage.setItem("accessToken", action.payload.token);
     },
 
     /* ============================
@@ -69,7 +68,9 @@ const authSlice = createSlice({
     logout: (state) => {
       state.user = null;
       state.token = null;
-      localStorage.removeItem("token");
+
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
     }
   },
   extraReducers: (builder) => {
@@ -83,8 +84,15 @@ const authSlice = createSlice({
       .addCase(loginThunk.fulfilled, (state, action) => {
         state.loading = false;
         state.user = action.payload.user;
-        state.token = action.payload.token;
-        localStorage.setItem("token", action.payload.token);
+
+        // ⚠️ IMPORTANT: Check backend field name
+        const token =
+          action.payload.accessToken || action.payload.token;
+
+        state.token = token;
+
+        // ✅ STORE CORRECT KEY
+        localStorage.setItem("accessToken", token);
       })
       .addCase(loginThunk.rejected, (state) => {
         state.loading = false;

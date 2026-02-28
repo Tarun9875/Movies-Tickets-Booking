@@ -5,14 +5,31 @@ import Booking from "../../models/Booking.model";
 import Show from "../../models/Show.model";
 
 /* =====================================================
-   CREATE BOOKING
+   CUSTOM AUTH REQUEST TYPE
+===================================================== */
+
+interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    role?: string;
+    email?: string;
+  };
+}
+
+/* =====================================================
+   CREATE BOOKING (USER LINKED)
 ===================================================== */
 
 export const createBooking = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
+    const userId = req.user?.id;
+
+    if (!userId)
+      return res.status(401).json({ message: "Unauthorized" });
+
     const {
       showId,
       seats,
@@ -24,8 +41,6 @@ export const createBooking = async (
       selectedTime,
       selectedLanguage,
     } = req.body;
-
-    /* ================= BASIC VALIDATION ================= */
 
     if (!showId)
       return res.status(400).json({ message: "Show ID required" });
@@ -42,19 +57,13 @@ export const createBooking = async (
     if (!["UPI", "CARD"].includes(paymentMethod))
       return res.status(400).json({ message: "Invalid payment method" });
 
-    /* ================= FETCH SHOW ================= */
-
     const show = await Show.findById(showId);
 
     if (!show)
       return res.status(404).json({ message: "Show not found" });
 
-    /* ================= PREVENT BOOKING IF CANCELLED SHOW ================= */
-
     if (show.status && show.status !== "ACTIVE")
       return res.status(400).json({ message: "Show is not active" });
-
-    /* ================= CHECK SEAT AVAILABILITY ================= */
 
     const alreadyBooked = seats.some((seat: string) =>
       show.bookedSeats.includes(seat)
@@ -64,8 +73,6 @@ export const createBooking = async (
       return res
         .status(400)
         .json({ message: "One or more seats already booked" });
-
-    /* ================= CALCULATE PRICE ================= */
 
     let totalAmount = 0;
 
@@ -82,14 +89,11 @@ export const createBooking = async (
     if (totalAmount <= 0)
       return res.status(400).json({ message: "Invalid seat pricing" });
 
-    /* ================= LOCK SEATS ================= */
-
     show.bookedSeats.push(...seats);
     await show.save();
 
-    /* ================= CREATE BOOKING ================= */
-
     const booking = await Booking.create({
+      user: userId,
       name,
       email,
       movieTitle,
@@ -118,7 +122,78 @@ export const createBooking = async (
 };
 
 /* =====================================================
-   GET ALL BOOKINGS
+   UPDATE BOOKING STATUS (ADMIN)
+===================================================== */
+
+export const updateBookingStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["CONFIRMED", "CANCELLED"].includes(status))
+      return res.status(400).json({
+        message: "Invalid status value",
+      });
+
+    const booking = await Booking.findById(id);
+
+    if (!booking)
+      return res.status(404).json({
+        message: "Booking not found",
+      });
+
+    booking.status = status;
+    await booking.save();
+
+    return res.json({
+      success: true,
+      message: "Booking status updated",
+      booking,
+    });
+
+  } catch (error) {
+    console.error("Status Update Error:", error);
+    res.status(500).json({
+      message: "Status update failed",
+    });
+  }
+};
+
+/* =====================================================
+   GET USER BOOKINGS
+===================================================== */
+
+export const getUserBookings = async (
+  req: AuthRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const bookings = await Booking.find({ user: userId })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      bookings,
+    });
+
+  } catch (error) {
+    console.error("Fetch User Bookings Error:", error);
+    res.status(500).json({
+      message: "Failed to fetch bookings",
+    });
+  }
+};
+
+/* =====================================================
+   GET ALL BOOKINGS (ADMIN)
 ===================================================== */
 
 export const getAllBookings = async (
@@ -142,64 +217,24 @@ export const getAllBookings = async (
 };
 
 /* =====================================================
-   UPDATE BOOKING STATUS
-===================================================== */
-
-export const updateBookingStatus = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!["CONFIRMED", "CANCELLED"].includes(status))
-      return res.status(400).json({
-        message: "Invalid status value",
-      });
-
-    const booking = await Booking.findById(id);
-
-    if (!booking)
-      return res.status(404).json({
-        message: "Booking not found",
-      });
-
-    /* Prevent unnecessary update */
-    if (booking.status === status)
-      return res.status(400).json({
-        message: "Booking already in this status",
-      });
-
-    booking.status = status;
-    await booking.save();
-
-    return res.json({
-      success: true,
-      message: "Booking status updated",
-      booking,
-    });
-
-  } catch (error) {
-    console.error("Status Update Error:", error);
-    res.status(500).json({
-      message: "Status update failed",
-    });
-  }
-};
-
-/* =====================================================
-   CANCEL BOOKING + RELEASE SEATS
+   CANCEL BOOKING (USER SAFE)
 ===================================================== */
 
 export const cancelBooking = async (
-  req: Request,
+  req: AuthRequest,
   res: Response
 ) => {
   try {
+    const userId = req.user?.id;
     const { id } = req.params;
 
-    const booking = await Booking.findById(id);
+    if (!userId)
+      return res.status(401).json({ message: "Unauthorized" });
+
+    const booking = await Booking.findOne({
+      _id: id,
+      user: userId,
+    });
 
     if (!booking)
       return res.status(404).json({
@@ -210,8 +245,6 @@ export const cancelBooking = async (
       return res.status(400).json({
         message: "Booking already cancelled",
       });
-
-    /* ================= RELEASE SEATS ================= */
 
     const show = await Show.findById(booking.show);
 
