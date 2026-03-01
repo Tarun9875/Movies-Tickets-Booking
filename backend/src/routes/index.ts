@@ -1,23 +1,52 @@
 // backend/src/routes/index.ts
 
 import { Router } from "express";
+
 import authRoutes from "./auth/auth.route";
 import bookingRoutes from "./booking/booking.route";
 import movieRoutes from "./movie/movie.routes";
 import adminRoutes from "./admin/admin.routes";
 import showRoutes from "./show/show.routes";
 import showSeatsRoutes from "./seats/showSeats.routes";
-import userRoute from "./user/user.route";
+import userRoutes from "./user/user.route";
+
 const router = Router();
 
+/* =====================================================
+   AUTH ROUTES
+   /api/auth
+===================================================== */
 router.use("/auth", authRoutes);
-router.use("/bookings", bookingRoutes);   // ✅ FIXED HERE
+
+/* =====================================================
+   BOOKING ROUTES
+   /api/bookings
+===================================================== */
+router.use("/bookings", bookingRoutes);
+
+/* =====================================================
+   MOVIE ROUTES
+   /api/movies
+===================================================== */
 router.use("/movies", movieRoutes);
+
+/* =====================================================
+   ADMIN ROUTES
+   /api/admin
+===================================================== */
 router.use("/admin", adminRoutes);
 
-/* 🔥 IMPORTANT ORDER */
+/* =====================================================
+   SHOW ROUTES
+   IMPORTANT ORDER (keep together)
+   /api/shows
+===================================================== */
 router.use("/shows", showRoutes);
 router.use("/shows", showSeatsRoutes);
 
-router.use("/users", userRoute);
+/* =====================================================
+   USER ROUTES
+   /api/users
+===================================================== */
+router.use("/users", userRoutes);
 export default router;

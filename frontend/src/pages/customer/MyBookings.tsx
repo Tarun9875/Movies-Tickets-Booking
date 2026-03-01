@@ -1,9 +1,8 @@
-// frontend/src/pages/customer/MyBookings.tsx
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageContainer from "../../components/layout/PageContainer";
 import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 interface Booking {
   _id: string;
@@ -27,10 +26,13 @@ export default function MyBookings() {
 
   const fetchBookings = async () => {
     try {
-      const res = await api.get("/bookings");
-      setBookings(res.data.bookings);
-    } catch (error) {
-      console.error("Failed to fetch bookings");
+      const res = await api.get("/bookings/my"); // ✅ FIXED HERE
+      setBookings(res.data.bookings || []);
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message ||
+        "Failed to fetch bookings"
+      );
     } finally {
       setLoading(false);
     }
@@ -47,9 +49,13 @@ export default function MyBookings() {
 
     try {
       await api.put(`/bookings/${id}/cancel`);
+      toast.success("Booking cancelled");
       fetchBookings();
-    } catch {
-      alert("Cancel failed");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message ||
+        "Cancel failed"
+      );
     }
   };
 
@@ -96,55 +102,26 @@ export default function MyBookings() {
             >
               <div className="flex flex-col md:flex-row justify-between gap-6">
 
-                {/* LEFT SIDE DETAILS */}
                 <div>
                   <h2 className="text-xl font-semibold mb-2">
                     🎬 {booking.movieTitle}
                   </h2>
 
-                  <p style={{ color: "var(--muted-text)" }}>
-                    📅 {booking.selectedDate}
-                  </p>
-
-                  <p style={{ color: "var(--muted-text)" }}>
-                    ⏰ {booking.selectedTime}
-                  </p>
-
-                  <p style={{ color: "var(--muted-text)" }}>
-                    🌐 {booking.selectedLanguage}
-                  </p>
-
-                  <p className="mt-3">
-                    🎟 Seats: {booking.seats.join(", ")}
-                  </p>
-
-                  <p className="mt-2">
-                    💳 Payment: {booking.paymentMethod}
-                  </p>
-
-                  <p className="font-semibold mt-2 text-lg">
+                  <p>📅 {booking.selectedDate}</p>
+                  <p>⏰ {booking.selectedTime}</p>
+                  <p>🌐 {booking.selectedLanguage}</p>
+                  <p>🎟 Seats: {booking.seats.join(", ")}</p>
+                  <p>💳 Payment: {booking.paymentMethod}</p>
+                  <p className="font-semibold">
                     💰 ₹{booking.totalAmount}
                   </p>
-
-                  <p
-                    className="text-xs mt-2"
-                    style={{ color: "var(--muted-text)" }}
-                  >
-                    🕒 Booked on:{" "}
-                    {new Date(
-                      booking.createdAt
-                    ).toLocaleString()}
-                  </p>
-
-                  <p className="text-xs mt-1 opacity-70">
-                    🧾 Booking ID: {booking._id}
+                  <p className="text-xs opacity-70">
+                    🕒 {new Date(booking.createdAt).toLocaleString()}
                   </p>
                 </div>
 
-                {/* RIGHT SIDE STATUS + ACTION */}
                 <div className="flex flex-col justify-between items-end">
 
-                  {/* STATUS BADGE */}
                   <span
                     className={`px-4 py-1 rounded-full text-xs font-medium ${
                       booking.status === "CONFIRMED"
@@ -155,40 +132,33 @@ export default function MyBookings() {
                     {booking.status}
                   </span>
 
-                  {/* ACTION BUTTONS */}
-                  <div className="flex gap-3 mt-6">
+                  {booking.status === "CONFIRMED" && (
+                    <div className="flex gap-3 mt-6">
+                      <button
+                        onClick={() =>
+                          navigate("/ticket", { state: booking })
+                        }
+                        className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
+                      >
+                        View Ticket
+                      </button>
 
-                    {booking.status === "CONFIRMED" && (
-                      <>
-                        <button
-                          onClick={() =>
-                            navigate("/ticket", {
-                              state: booking,
-                            })
-                          }
-                          className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
-                        >
-                          View Ticket
-                        </button>
+                      <button
+                        onClick={() =>
+                          cancelBooking(booking._id)
+                        }
+                        className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
 
-                        <button
-                          onClick={() =>
-                            cancelBooking(booking._id)
-                          }
-                          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    )}
-
-                    {booking.status === "CANCELLED" && (
-                      <span className="text-sm text-red-500 mt-2">
-                        Booking Cancelled
-                      </span>
-                    )}
-
-                  </div>
+                  {booking.status === "CANCELLED" && (
+                    <span className="text-sm text-red-500 mt-2">
+                      Booking Cancelled
+                    </span>
+                  )}
                 </div>
 
               </div>

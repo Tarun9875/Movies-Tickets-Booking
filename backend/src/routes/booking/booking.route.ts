@@ -1,4 +1,5 @@
-// booking.route.ts
+// backend/src/routes/booking/booking.route.ts
+
 import express from "express";
 import {
   createBooking,
@@ -15,13 +16,21 @@ const router = express.Router();
 
 /* ================= USER ROUTES ================= */
 
+// Create booking
 router.post("/", protect, createBooking);
-router.get("/", protect, getUserBookings);
+
+// Get logged-in user's bookings
+router.get("/my", protect, getUserBookings);
+
+// Cancel own booking
 router.put("/:id/cancel", protect, cancelBooking);
 
 /* ================= ADMIN ROUTES ================= */
 
+// Get ALL bookings (Admin only)
 router.get("/admin", protect, isAdmin, getAllBookings);
+
+// Update booking status (Admin only)
 router.put("/:id/status", protect, isAdmin, updateBookingStatus);
 
 export default router;

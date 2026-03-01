@@ -1,5 +1,3 @@
-// src/routes/admin/admin.routes.ts
-
 import { Router } from "express";
 import { protect } from "../../middlewares/auth/auth.middleware";
 import { roleMiddleware } from "../../middlewares/role/role.middleware";
@@ -8,38 +6,34 @@ import {
   adminDashboard,
   createMovie,
   getAdminMovies,
-  deleteMovie
+  deleteMovie,
+  getAllUsers
 } from "../../controllers/admin/admin.controller";
 
 const router = Router();
 
-/**
- * 🔒 All routes below require:
- * 1. Valid JWT
- * 2. ADMIN role
- */
-
+/* =====================================================
+   🔒 PROTECTED ADMIN ROUTES
+===================================================== */
 router.use(protect);
-router.use("/", roleMiddleware(["ADMIN"]));
+router.use(roleMiddleware(["ADMIN"]));
 
-/**
- * 📊 Admin Dashboard
- */
+/* =====================================================
+   📊 DASHBOARD (Full Business Analytics)
+   GET /api/admin/dashboard
+===================================================== */
 router.get("/dashboard", adminDashboard);
 
-/**
- * 🎬 Create Movie
- */
+/* =====================================================
+   🎬 MOVIE MANAGEMENT
+===================================================== */
 router.post("/movies", createMovie);
-
-/**
- * 📃 Get All Movies (Admin View)
- */
 router.get("/movies", getAdminMovies);
-
-/**
- * ❌ Delete Movie
- */
 router.delete("/movies/:id", deleteMovie);
+
+/* =====================================================
+   👥 USER MANAGEMENT
+===================================================== */
+router.get("/users", getAllUsers);
 
 export default router;

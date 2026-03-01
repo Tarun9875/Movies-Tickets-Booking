@@ -14,48 +14,56 @@ export const protect = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    /* ================= HEADER CHECK ================= */
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({
-        message: "Unauthorized - No token",
-      });
+    /* ================= GET TOKEN ================= */
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer ")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
     }
 
-    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized - No token provided",
+      });
+    }
 
     /* ================= VERIFY TOKEN ================= */
     const decoded: any = verifyAccessToken(token);
 
-    const userId =
-      decoded?.id || decoded?._id || decoded?.userId;
-
-    if (!userId) {
+    if (!decoded || !decoded.id) {
       return res.status(401).json({
+        success: false,
         message: "Invalid token payload",
       });
     }
 
     /* ================= CHECK USER EXISTS ================= */
-    const userExists = await User.findById(userId);
+    const user = await User.findById(decoded.id).select("-password");
 
-    if (!userExists) {
+    if (!user) {
       return res.status(401).json({
+        success: false,
         message: "User not found",
       });
     }
 
-    /* ================= ATTACH USER ================= */
+    /* ================= ATTACH USER TO REQUEST ================= */
     req.user = {
-      id: userExists._id.toString(),
-      role: userExists.role,
-      email: userExists.email,
+      id: user._id.toString(),
+      role: user.role?.toUpperCase(), // 🔥 normalize role
+      email: user.email,
     };
 
     next();
   } catch (error) {
+    console.error("Protect Middleware Error:", error);
+
     return res.status(401).json({
+      success: false,
       message: "Invalid or expired token",
     });
   }

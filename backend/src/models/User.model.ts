@@ -1,3 +1,5 @@
+// backend/src/models/User.model.ts
+
 import mongoose, { Schema, Document } from "mongoose";
 
 /* =====================================
@@ -31,7 +33,7 @@ const userSchema = new Schema<IUser>(
     email: {
       type: String,
       required: true,
-      unique: true,
+      unique: true,       // ✅ This already creates index
       lowercase: true,
       trim: true,
     },
@@ -68,9 +70,7 @@ const userSchema = new Schema<IUser>(
 );
 
 /* =====================================
-   INDEX FOR PERFORMANCE
+   EXPORT MODEL
 ===================================== */
-
-userSchema.index({ email: 1 });
 
 export default mongoose.model<IUser>("User", userSchema);

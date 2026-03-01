@@ -26,15 +26,26 @@ export default function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(true);
 
-  /* ================= FETCH BOOKINGS ================= */
+  /* ================= FETCH ALL BOOKINGS (ADMIN) ================= */
   const fetchBookings = async () => {
     try {
-      const res = await api.get("/bookings");
+      // 🔥 IMPORTANT FIX
+      const res = await api.get("/bookings/admin");
+
       const data = res.data.bookings || [];
+
       setBookings(data);
       setFiltered(data);
-    } catch {
-      toast.error("Failed to load bookings");
+    } catch (error: any) {
+      console.error(error);
+
+      if (error.response?.status === 403) {
+        toast.error("Access denied. Admin only.");
+      } else if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.");
+      } else {
+        toast.error("Failed to load bookings");
+      }
     } finally {
       setLoading(false);
     }
@@ -84,7 +95,8 @@ export default function AdminBookings() {
       );
 
       toast.success(`Booking ${newStatus}`);
-    } catch {
+    } catch (error: any) {
+      console.error(error);
       toast.error("Status update failed");
     }
   };
@@ -162,7 +174,6 @@ export default function AdminBookings() {
               border: "1px solid var(--border-color)",
             }}
           >
-            {/* MOVIE TITLE */}
             <h2 className="font-semibold text-lg mb-2">
               {booking.movieTitle}
             </h2>
@@ -184,10 +195,8 @@ export default function AdminBookings() {
               </p>
             </div>
 
-            {/* STATUS + SELECT */}
+            {/* STATUS */}
             <div className="mt-5 space-y-3">
-
-              {/* STATUS BADGE */}
               <span
                 className="px-3 py-1 text-xs rounded-full font-medium inline-block"
                 style={{
@@ -201,7 +210,6 @@ export default function AdminBookings() {
                 {booking.status}
               </span>
 
-              {/* STATUS SELECT */}
               <select
                 value={booking.status}
                 onChange={(e) =>
@@ -229,7 +237,6 @@ export default function AdminBookings() {
                   CANCELLED
                 </option>
               </select>
-
             </div>
           </div>
         ))}
