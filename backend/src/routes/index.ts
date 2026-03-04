@@ -9,6 +9,8 @@ import adminRoutes from "./admin/admin.routes";
 import showRoutes from "./show/show.routes";
 import showSeatsRoutes from "./seats/showSeats.routes";
 import userRoutes from "./user/user.route";
+import reportsRoutes from "./admin/reports.route";
+import settingsRoutes from "./admin/settings.route";
 
 const router = Router();
 
@@ -49,4 +51,15 @@ router.use("/shows", showSeatsRoutes);
    /api/users
 ===================================================== */
 router.use("/users", userRoutes);
+/* =====================================================
+   REPORTS ROUTES
+   /api/admin/reports
+===================================================== */
+router.use("/admin", reportsRoutes);
+/* =====================================================
+   SETTINGS ROUTES
+   /api/admin/settings
+===================================================== */
+router.use("/admin", settingsRoutes);
+
 export default router;

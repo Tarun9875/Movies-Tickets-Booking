@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+// frontend/src/pages/admin/Reports.tsx
+import { useEffect, useState } from "react";
 import { Download } from "lucide-react";
 import { Bar, Line } from "react-chartjs-2";
 import {
@@ -13,6 +14,7 @@ import {
   Legend,
 } from "chart.js";
 import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 ChartJS.register(
   CategoryScale,
@@ -32,29 +34,34 @@ export default function AdminReports() {
   const [movieRevenue, setMovieRevenue] = useState<any[]>([]);
   const [trend, setTrend] = useState<any[]>([]);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   const [format, setFormat] = useState<FormatType>("CSV");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const chartRef = useRef<any>(null);
-
-  /* ================= FETCH FROM BACKEND ================= */
+  /* ================= FETCH REPORT ================= */
 
   const fetchReports = async () => {
-    const res = await api.get("/admin/reports", {
-      params: { startDate, endDate }
-    });
+    try {
+      setLoading(true);
 
-    setBookings(res.data.bookings);
-    setMovieRevenue(res.data.movieRevenue);
-    setTrend(res.data.trend);
-    setTotalRevenue(res.data.totalRevenue);
+      const res = await api.get("/admin/reports", {
+        params: { startDate, endDate },
+      });
+
+      setBookings(res.data.bookings);
+      setMovieRevenue(res.data.movieRevenue);
+      setTrend(res.data.trend);
+      setTotalRevenue(res.data.totalRevenue);
+
+    } catch (error) {
+      toast.error("Failed to load reports");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
 
   useEffect(() => {
     fetchReports();
@@ -85,7 +92,7 @@ export default function AdminReports() {
     ],
   };
 
-  /* ================= DOWNLOAD ================= */
+  /* ================= DOWNLOAD REPORT ================= */
 
   const downloadFile = () => {
     let content = "";
@@ -94,12 +101,13 @@ export default function AdminReports() {
       content = JSON.stringify(bookings, null, 2);
     } else {
       content = "BookingID,Movie,Amount,Date\n";
+
       content += bookings
         .map(
           (b) =>
-            `${b._id},${b.movieTitle},${b.totalAmount},${new Date(
+            `"${b._id}","${b.movieTitle}","${b.totalAmount}","${new Date(
               b.createdAt
-            ).toLocaleString()}`
+            ).toLocaleString()}"`
         )
         .join("\n");
     }
@@ -109,7 +117,7 @@ export default function AdminReports() {
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report.${format.toLowerCase()}`;
+    a.download = `moviebook_report.${format.toLowerCase()}`;
     a.click();
   };
 
@@ -121,6 +129,7 @@ export default function AdminReports() {
         <h1 className="text-3xl font-bold">📊 Reports</h1>
 
         <div className="flex gap-3 items-center">
+
           <select
             value={format}
             onChange={(e) => setFormat(e.target.value as FormatType)}
@@ -137,23 +146,27 @@ export default function AdminReports() {
             <Download size={16} />
             Download
           </button>
+
         </div>
       </div>
 
       {/* FILTER */}
       <div className="flex gap-4">
+
         <input
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           className="px-3 py-2 border rounded-lg"
         />
+
         <input
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="px-3 py-2 border rounded-lg"
         />
+
       </div>
 
       {/* TOTAL */}
@@ -161,9 +174,15 @@ export default function AdminReports() {
         Total Revenue: ₹{totalRevenue}
       </div>
 
+      {loading && (
+        <div className="text-center text-gray-500">
+          Loading reports...
+        </div>
+      )}
+
       {/* BAR CHART */}
       <div className="card p-6">
-        <Bar ref={chartRef} data={barData} />
+        <Bar data={barData} />
       </div>
 
       {/* LINE CHART */}

@@ -1,6 +1,6 @@
-// frontend/src/pages/admin/Settings.tsx
-
 import { useEffect, useState } from "react";
+import api from "../../services/axios";
+import { toast } from "react-toastify";
 
 interface SettingsData {
   theatreName: string;
@@ -15,6 +15,7 @@ interface SettingsData {
 }
 
 export default function AdminSettings() {
+
   const [settings, setSettings] = useState<SettingsData>({
     theatreName: "Ruchu Cinemas",
     theatreLocation: "Surat",
@@ -27,21 +28,54 @@ export default function AdminSettings() {
     currency: "INR",
   });
 
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Load saved settings
+  /* ================= LOAD SETTINGS ================= */
+
   useEffect(() => {
-    const saved = localStorage.getItem("adminSettings");
-    if (saved) {
-      setSettings(JSON.parse(saved));
-    }
+
+    const fetchSettings = async () => {
+      try {
+
+        setLoading(true);
+
+        const res = await api.get("/admin/settings");
+
+        setSettings(res.data);
+
+      } catch (error) {
+
+        toast.error("Failed to load settings");
+
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSettings();
+
   }, []);
 
-  // Save settings
-  const handleSave = () => {
-    localStorage.setItem("adminSettings", JSON.stringify(settings));
-    setMessage("Settings saved successfully!");
-    setTimeout(() => setMessage(""), 3000);
+  /* ================= SAVE SETTINGS ================= */
+
+  const handleSave = async () => {
+
+    try {
+
+      setLoading(true);
+
+      await api.put("/admin/settings", settings);
+
+      toast.success("Settings updated successfully");
+
+    } catch (error) {
+
+      toast.error("Failed to save settings");
+
+    } finally {
+      setLoading(false);
+    }
+
   };
 
   const handleChange = (field: keyof SettingsData, value: any) => {
@@ -55,6 +89,10 @@ export default function AdminSettings() {
     <div style={{ color: "var(--text-color)" }}>
       <h1 className="text-3xl font-bold mb-8">⚙ Admin Settings</h1>
 
+      {loading && (
+        <p className="mb-4 text-gray-500">Loading settings...</p>
+      )}
+
       {/* THEATRE INFO */}
       <div className="settings-card">
         <h2 className="settings-title">🏢 Theatre Information</h2>
@@ -63,12 +101,13 @@ export default function AdminSettings() {
           <InputField
             label="Theatre Name"
             value={settings.theatreName}
-            onChange={(v) => handleChange("theatreName", v)}
+            onChange={(v:any) => handleChange("theatreName", v)}
           />
+
           <InputField
             label="Location"
             value={settings.theatreLocation}
-            onChange={(v) => handleChange("theatreLocation", v)}
+            onChange={(v:any) => handleChange("theatreLocation", v)}
           />
         </div>
       </div>
@@ -78,30 +117,35 @@ export default function AdminSettings() {
         <h2 className="settings-title">🎟 Ticket Pricing</h2>
 
         <div className="grid md:grid-cols-2 gap-4">
+
           <InputField
             label="VIP Price"
             type="number"
             value={settings.vipPrice}
-            onChange={(v) => handleChange("vipPrice", Number(v))}
+            onChange={(v:any) => handleChange("vipPrice", Number(v))}
           />
+
           <InputField
             label="Premium Price"
             type="number"
             value={settings.premiumPrice}
-            onChange={(v) => handleChange("premiumPrice", Number(v))}
+            onChange={(v:any) => handleChange("premiumPrice", Number(v))}
           />
+
           <InputField
             label="Executive Price"
             type="number"
             value={settings.executivePrice}
-            onChange={(v) => handleChange("executivePrice", Number(v))}
+            onChange={(v:any) => handleChange("executivePrice", Number(v))}
           />
+
           <InputField
             label="Normal Price"
             type="number"
             value={settings.normalPrice}
-            onChange={(v) => handleChange("normalPrice", Number(v))}
+            onChange={(v:any) => handleChange("normalPrice", Number(v))}
           />
+
         </div>
       </div>
 
@@ -110,15 +154,19 @@ export default function AdminSettings() {
         <h2 className="settings-title">⏳ Booking Rules</h2>
 
         <div className="grid md:grid-cols-2 gap-4">
+
           <InputField
             label="Seat Hold Time (minutes)"
             type="number"
             value={settings.bookingTimeLimit}
-            onChange={(v) => handleChange("bookingTimeLimit", Number(v))}
+            onChange={(v:any) =>
+              handleChange("bookingTimeLimit", Number(v))
+            }
           />
 
           <div>
             <label className="block mb-2">Currency</label>
+
             <select
               value={settings.currency}
               onChange={(e) =>
@@ -130,7 +178,9 @@ export default function AdminSettings() {
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
             </select>
+
           </div>
+
         </div>
       </div>
 
@@ -139,7 +189,9 @@ export default function AdminSettings() {
         <h2 className="settings-title">🛠 System Settings</h2>
 
         <div className="flex items-center justify-between">
+
           <span>Maintenance Mode</span>
+
           <input
             type="checkbox"
             checked={settings.maintenanceMode}
@@ -148,13 +200,16 @@ export default function AdminSettings() {
             }
             className="w-5 h-5"
           />
+
         </div>
       </div>
 
       {/* SAVE BUTTON */}
       <div className="mt-8">
+
         <button
           onClick={handleSave}
+          disabled={loading}
           className="px-6 py-3 rounded-lg"
           style={{
             backgroundColor: "#dc2626",
@@ -164,15 +219,12 @@ export default function AdminSettings() {
           Save Settings
         </button>
 
-        {message && (
-          <p className="mt-4 text-green-500">{message}</p>
-        )}
       </div>
     </div>
   );
 }
 
-/* ================= REUSABLE INPUT ================= */
+/* ================= INPUT COMPONENT ================= */
 
 function InputField({
   label,
@@ -180,15 +232,19 @@ function InputField({
   onChange,
   type = "text",
 }: any) {
+
   return (
     <div>
+
       <label className="block mb-2">{label}</label>
+
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="settings-input"
       />
+
     </div>
   );
 }

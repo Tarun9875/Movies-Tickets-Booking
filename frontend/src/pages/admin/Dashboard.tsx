@@ -1,4 +1,5 @@
-//frontend/src/pages/admin/Dashboard.tsx
+// frontend/src/pages/admin/Dashboard.tsx
+
 import { useEffect, useState } from "react";
 import api from "../../services/axios";
 import CountUp from "react-countup";
@@ -28,6 +29,17 @@ import {
   FaTheaterMasks
 } from "react-icons/fa";
 
+interface Booking {
+  _id: string;
+  movieTitle: string;
+  totalAmount: number;
+  status: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+}
+
 interface DashboardData {
   overview: {
     totalMovies: number;
@@ -39,21 +51,33 @@ interface DashboardData {
     revenueGrowth?: number;
     peakShowTime?: string;
   };
-  monthlyRevenue: any[];
-  bookingStatus: any[];
-  topMovies: any[];
-  recentBookings: any[];
-  activities?: string[];
+  monthlyRevenue: { _id: { month: number }; revenue: number }[];
+  bookingStatus: { _id: string; count: number }[];
+  topMovies: { _id: string; revenue: number }[];
+  recentBookings: Booking[];
 }
 
 export default function AdminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("month");
 
   useEffect(() => {
-    api.get(`/admin/dashboard?range=${range}`).then((res) => {
-      setData(res.data);
-    });
+    const fetchDashboard = async () => {
+      try {
+        setLoading(true);
+        const res = await api.get(`/admin/dashboard?range=${range}`);
+        if (res.data.success) {
+          setData(res.data);
+        }
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboard();
   }, [range]);
 
   const formatINR = (amount: number) =>
@@ -62,15 +86,17 @@ export default function AdminDashboard() {
       currency: "INR"
     }).format(amount);
 
-  if (!data) {
+  if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 animate-pulse">
-        {Array(5).fill(0).map((_, i) => (
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-24 bg-gray-700 rounded-xl"></div>
         ))}
       </div>
     );
   }
+
+  if (!data) return null;
 
   const COLORS = ["#22c55e", "#eab308", "#ef4444"];
 
@@ -84,14 +110,12 @@ export default function AdminDashboard() {
   const exportPDF = () => {
     const doc = new jsPDF();
     doc.text("Ruchu Cinemas Business Report", 14, 15);
-    doc.text(`Revenue: ${formatINR(data.overview.totalRevenue)}`, 14, 25);
-    doc.text(`Bookings: ${data.overview.totalBookings}`, 14, 32);
 
     autoTable(doc, {
-      startY: 40,
+      startY: 25,
       head: [["User", "Movie", "Amount", "Status"]],
-      body: data.recentBookings.map((b: any) => [
-        b.user?.name,
+      body: data.recentBookings.map((b) => [
+        b.user?.name ?? "User",
         b.movieTitle,
         formatINR(b.totalAmount),
         b.status
@@ -151,25 +175,20 @@ export default function AdminDashboard() {
 
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        <StatCard
-          icon={<FaRupeeSign />}
-          title="Revenue"
-          value={data.overview.totalRevenue}
-          format={formatINR}
-          growth={data.overview.revenueGrowth}
-          color="green"
-        />
-        <StatCard icon={<FaTicketAlt />} title="Bookings" value={data.overview.totalBookings} color="blue" />
-        <StatCard icon={<FaFilm />} title="Movies" value={data.overview.totalMovies} color="purple" />
-        <StatCard icon={<FaTheaterMasks />} title="Shows" value={data.overview.totalShows} color="orange" />
-        <StatCard icon={<FaUsers />} title="Users" value={data.overview.totalUsers} color="pink" />
-      </div>
+        <StatCard icon={<FaRupeeSign />} title="Revenue"
+          value={data.overview.totalRevenue} format={formatINR} />
 
-      {/* EXTRA KPIs */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <InfoCard title="Seat Occupancy" value={`${data.overview.seatOccupancy || 0}%`} />
-        <InfoCard title="Peak Showtime" value={data.overview.peakShowTime || "N/A"} />
-        <InfoCard title="Growth Rate" value={`${data.overview.revenueGrowth || 0}%`} />
+        <StatCard icon={<FaTicketAlt />} title="Bookings"
+          value={data.overview.totalBookings} />
+
+        <StatCard icon={<FaFilm />} title="Movies"
+          value={data.overview.totalMovies} />
+
+        <StatCard icon={<FaTheaterMasks />} title="Shows"
+          value={data.overview.totalShows} />
+
+        <StatCard icon={<FaUsers />} title="Users"
+          value={data.overview.totalUsers} />
       </div>
 
       {/* CHARTS */}
@@ -178,7 +197,12 @@ export default function AdminDashboard() {
           <h2 className="card-title">📈 Monthly Revenue</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.monthlyRevenue}>
-              <XAxis dataKey="_id.month" tickFormatter={(m) => monthNames[m - 1]} />
+              <XAxis
+                dataKey="_id.month"
+                tickFormatter={(m: number) =>
+                  monthNames[(m ?? 1) - 1]
+                }
+              />
               <YAxis />
               <Tooltip />
               <Bar dataKey="revenue" fill="#6366f1" />
@@ -190,8 +214,13 @@ export default function AdminDashboard() {
           <h2 className="card-title">🎟 Booking Status</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie data={data.bookingStatus} dataKey="count" nameKey="_id" outerRadius={100}>
-                {data.bookingStatus.map((entry: any, index: number) => (
+              <Pie
+                data={data.bookingStatus}
+                dataKey="count"
+                nameKey="_id"
+                outerRadius={100}
+              >
+                {data.bookingStatus.map((entry, index) => (
                   <Cell key={entry._id} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
@@ -204,8 +233,11 @@ export default function AdminDashboard() {
       {/* TOP MOVIES */}
       <div className="card">
         <h2 className="card-title">🎬 Top Movies</h2>
-        {data.topMovies.map((movie: any) => (
-          <div key={movie._id} className="flex justify-between p-3 bg-[var(--hover-bg)] rounded-lg mb-2">
+        {data.topMovies.map((movie) => (
+          <div
+            key={movie._id}
+            className="flex justify-between p-3 bg-[var(--hover-bg)] rounded-lg mb-2"
+          >
             <span>{movie._id}</span>
             <span>{formatINR(movie.revenue)}</span>
           </div>
@@ -216,7 +248,7 @@ export default function AdminDashboard() {
   );
 }
 
-/* ================= EXPORT BUTTON ================= */
+/* ================= COMPONENTS ================= */
 
 function ExportButton({ children, onClick, color }: any) {
   return (
@@ -229,30 +261,12 @@ function ExportButton({ children, onClick, color }: any) {
   );
 }
 
-/* ================= STAT CARD ================= */
-
-function StatCard({ icon, title, value, format, growth, color }: any) {
-  const borderColors: any = {
-    green: "border-green-500",
-    blue: "border-blue-500",
-    purple: "border-purple-500",
-    orange: "border-orange-500",
-    pink: "border-pink-500"
-  };
-
-  const iconBg: any = {
-    green: "bg-green-500/20 text-green-500",
-    blue: "bg-blue-500/20 text-blue-500",
-    purple: "bg-purple-500/20 text-purple-500",
-    orange: "bg-orange-500/20 text-orange-500",
-    pink: "bg-pink-500/20 text-pink-500"
-  };
-
+function StatCard({ icon, title, value, format }: any) {
   return (
-    <div className={`rounded-xl p-5 border-2 ${borderColors[color]} bg-[var(--card-bg)] shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300`}>
+    <div className="rounded-xl p-5 border-2 border-[var(--border-color)] bg-[var(--card-bg)] shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       <div className="flex justify-between items-center mb-3">
         <p className="text-sm opacity-70">{title}</p>
-        <div className={`p-2 rounded-full ${iconBg[color]}`}>
+        <div className="p-2 rounded-full bg-gray-200 text-gray-700">
           {icon}
         </div>
       </div>
@@ -260,23 +274,6 @@ function StatCard({ icon, title, value, format, growth, color }: any) {
       <h2 className="text-2xl font-bold text-[var(--primary-color)]">
         {format ? format(value) : <CountUp end={value || 0} duration={2} />}
       </h2>
-
-      {growth !== undefined && (
-        <p className={`text-sm mt-2 ${growth >= 0 ? "text-green-500" : "text-red-500"}`}>
-          {growth >= 0 ? "▲" : "▼"} {growth}%
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ================= INFO CARD ================= */
-
-function InfoCard({ title, value }: any) {
-  return (
-    <div className="card text-center">
-      <p className="opacity-70">{title}</p>
-      <h3 className="text-xl font-bold mt-2">{value}</h3>
     </div>
   );
 }

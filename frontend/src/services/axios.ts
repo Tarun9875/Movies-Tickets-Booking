@@ -1,5 +1,4 @@
 // frontend/src/services/axios.ts
-
 import axios from "axios";
 
 export const BASE_URL =
@@ -10,7 +9,7 @@ export const API_URL = `${BASE_URL}/api`;
 
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: false, // change to true only if using cookies
+  withCredentials: false,
 });
 
 /* =================================
@@ -18,6 +17,7 @@ const api = axios.create({
 ================================== */
 api.interceptors.request.use(
   (config) => {
+
     const token = localStorage.getItem("accessToken");
 
     if (token) {
@@ -36,21 +36,28 @@ api.interceptors.request.use(
 ================================== */
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
+
     const status = error.response?.status;
 
-    // 🔥 If token invalid OR expired
-    if (status === 401 || status === 403) {
-      console.log("Auth error → Logging out");
+    /* TOKEN EXPIRED */
+    if (status === 401) {
+
+      console.log("Session expired → redirect login");
 
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
 
-      // prevent infinite redirect loop
       if (!window.location.pathname.includes("/login")) {
         window.location.href = "/login";
       }
+    }
+
+    /* FORBIDDEN (ROLE ERROR) */
+    if (status === 403) {
+      console.warn("Forbidden request (permission issue)");
     }
 
     return Promise.reject(error);
